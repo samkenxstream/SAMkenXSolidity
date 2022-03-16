@@ -30,6 +30,19 @@
 using namespace std;
 using namespace solidity::lsp;
 
+namespace
+{
+ostream& crlf(ostream& os)
+{
+	#if defined(_WIN32)
+	os << "\n"; // We cannot reopen cout. LF is translated to CRLF on Windows.
+	#else
+	os << "\r\n";
+	#endif
+	return os;
+}
+}
+
 IOStreamTransport::IOStreamTransport(istream& _in, ostream& _out):
 	m_input{_in},
 	m_output{_out}
@@ -107,10 +120,9 @@ void IOStreamTransport::send(Json::Value _json, MessageID _id)
 
 	string const jsonString = solidity::util::jsonCompactPrint(_json);
 
-	m_output << "Content-Length: " << jsonString.size() << "\r\n";
-	m_output << "\r\n";
+	m_output << "Content-Length: " << jsonString.size() << crlf;
+	m_output << crlf;
 	m_output << jsonString;
-
 	m_output.flush();
 }
 
