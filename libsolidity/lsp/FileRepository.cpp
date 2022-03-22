@@ -17,6 +17,7 @@
 // SPDX-License-Identifier: GPL-3.0
 
 #include <libsolidity/lsp/FileRepository.h>
+#include <fmt/format.h>
 
 using namespace std;
 using namespace solidity;
@@ -35,12 +36,19 @@ string stripFilePrefix(string const& _path)
 
 }
 
+#define lspDebug(x) do { std::ofstream("C:\\Temp\\solc.log", std::ios_base::app) << (x) << std::endl; } while (0)
 string FileRepository::sourceUnitNameToClientPath(string const& _sourceUnitName) const
 {
 	if (m_sourceUnitNamesToClientPaths.count(_sourceUnitName))
+	{
+		lspDebug(fmt::format("sourceUnitNameToClientPath.A: {} -> {}", _sourceUnitName, m_sourceUnitNamesToClientPaths.at(_sourceUnitName)));
 		return m_sourceUnitNamesToClientPaths.at(_sourceUnitName);
+	}
 	else if (_sourceUnitName.find("file://") == 0)
+	{
+		lspDebug(fmt::format("sourceUnitNameToClientPath.B: {}", _sourceUnitName));
 		return _sourceUnitName;
+	}
 	else
 	{
 		auto basePath = m_fileReader.basePath();
@@ -50,6 +58,7 @@ string FileRepository::sourceUnitNameToClientPath(string const& _sourceUnitName)
 			basePath = (boost::filesystem::current_path().root_path() / basePath).normalize();
 #endif
 		auto const clientPath = basePath / _sourceUnitName;
+		lspDebug(fmt::format("sourceUnitNameToClientPath.C: {} -> {}", _sourceUnitName, clientPath.generic_string()));
 		return "file://" + clientPath.generic_string();
 	}
 }
@@ -68,6 +77,7 @@ void FileRepository::setSourceByClientPath(string const& _uri, string _text)
 {
 	// This is needed for uris outside the base path. It can lead to collisions,
 	// but we need to mostly rewrite this in a future version anyway.
+	lspDebug(fmt::format("setSourceByClientPath: {}", _uri));
 	m_sourceUnitNamesToClientPaths.emplace(clientPathToSourceUnitName(_uri), _uri);
 	m_fileReader.addOrUpdateFile(stripFilePrefix(_uri), move(_text));
 }

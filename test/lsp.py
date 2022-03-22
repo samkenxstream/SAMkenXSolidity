@@ -278,7 +278,7 @@ class SolidityLSPTestSuite: # {{{
         return f"{self.project_root_dir}/{test_case_name}.sol"
 
     def get_test_file_uri(self, test_case_name):
-        return "file://" + self.get_test_file_path(test_case_name)
+        return PurePath(self.get_test_file_path(test_case_name)).as_uri()
 
     def get_test_file_contents(self, test_case_name):
         """

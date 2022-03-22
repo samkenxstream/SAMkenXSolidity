@@ -23,43 +23,21 @@
 #include <liblangutil/Exceptions.h>
 
 #include <boost/algorithm/string.hpp>
+#include <fmt/format.h>
 
 #include <iostream>
 #include <sstream>
+#include <stdio.h>
+
+#if defined(_WIN32)
+#include <io.h>
+#include <fcntl.h>
+#endif
 
 using namespace std;
 using namespace solidity::lsp;
 
-namespace
-{
-ostream& crlf(ostream& os)
-{
-	#if defined(_WIN32)
-	os << "\n"; // We cannot reopen cout. LF is translated to CRLF on Windows.
-	#else
-	os << "\r\n";
-	#endif
-	return os;
-}
-}
-
-IOStreamTransport::IOStreamTransport(istream& _in, ostream& _out):
-	m_input{_in},
-	m_output{_out}
-{
-}
-
-IOStreamTransport::IOStreamTransport():
-	IOStreamTransport(cin, cout)
-{
-}
-
-bool IOStreamTransport::closed() const noexcept
-{
-	return m_input.eof();
-}
-
-optional<Json::Value> IOStreamTransport::receive()
+optional<Json::Value> Transport::receive()
 {
 	auto const headers = parseHeaders();
 	if (!headers)
@@ -74,7 +52,7 @@ optional<Json::Value> IOStreamTransport::receive()
 		return nullopt;
 	}
 
-	string const data = util::readBytes(m_input, stoul(headers->at("content-length")));
+	string const data = readBytes(stoul(headers->at("content-length")));
 
 	Json::Value jsonMessage;
 	string jsonParsingErrors;
@@ -88,52 +66,13 @@ optional<Json::Value> IOStreamTransport::receive()
 	return {move(jsonMessage)};
 }
 
-void IOStreamTransport::notify(string _method, Json::Value _message)
-{
-	Json::Value json;
-	json["method"] = move(_method);
-	json["params"] = move(_message);
-	send(move(json));
-}
-
-void IOStreamTransport::reply(MessageID _id, Json::Value _message)
-{
-	Json::Value json;
-	json["result"] = move(_message);
-	send(move(json), _id);
-}
-
-void IOStreamTransport::error(MessageID _id, ErrorCode _code, string _message)
-{
-	Json::Value json;
-	json["error"]["code"] = static_cast<int>(_code);
-	json["error"]["message"] = move(_message);
-	send(move(json), _id);
-}
-
-void IOStreamTransport::send(Json::Value _json, MessageID _id)
-{
-	solAssert(_json.isObject());
-	_json["jsonrpc"] = "2.0";
-	if (_id != Json::nullValue)
-		_json["id"] = _id;
-
-	string const jsonString = solidity::util::jsonCompactPrint(_json);
-
-	m_output << "Content-Length: " << jsonString.size() << crlf;
-	m_output << crlf;
-	m_output << jsonString;
-	m_output.flush();
-}
-
-optional<map<string, string>> IOStreamTransport::parseHeaders()
+optional<map<string, string>> Transport::parseHeaders()
 {
 	map<string, string> headers;
 
 	while (true)
 	{
-		string line;
-		getline(m_input, line);
+		auto line = getline();
 		if (boost::trim_copy(line).empty())
 			break;
 
@@ -141,8 +80,8 @@ optional<map<string, string>> IOStreamTransport::parseHeaders()
 		if (delimiterPos == string::npos)
 			return nullopt;
 
-		string name = boost::to_lower_copy(line.substr(0, delimiterPos));
-		string value = line.substr(delimiterPos + 1);
+		auto const name = boost::to_lower_copy(line.substr(0, delimiterPos));
+		auto const value = line.substr(delimiterPos + 1);
 		if (!headers.emplace(
 			boost::trim_copy(name),
 			boost::trim_copy(value)
@@ -150,4 +89,116 @@ optional<map<string, string>> IOStreamTransport::parseHeaders()
 			return nullopt;
 	}
 	return {move(headers)};
+}
+
+void Transport::notify(string _method, Json::Value _message)
+{
+	Json::Value json;
+	json["method"] = move(_method);
+	json["params"] = move(_message);
+	send(move(json));
+}
+
+void Transport::reply(MessageID _id, Json::Value _message)
+{
+	Json::Value json;
+	json["result"] = move(_message);
+	send(move(json), _id);
+}
+
+void Transport::error(MessageID _id, ErrorCode _code, string _message)
+{
+	Json::Value json;
+	json["error"]["code"] = static_cast<int>(_code);
+	json["error"]["message"] = move(_message);
+	send(move(json), _id);
+}
+
+void Transport::send(Json::Value _json, MessageID _id)
+{
+	solAssert(_json.isObject());
+	_json["jsonrpc"] = "2.0";
+	if (_id != Json::nullValue)
+		_json["id"] = _id;
+
+	// Trailing CRLF only for easier readability.
+	string const jsonString = solidity::util::jsonCompactPrint(_json);
+
+	writeBytes(fmt::format("Content-Length: {}\r\n\r\n", jsonString.size()));
+	writeBytes(jsonString);
+	flushOutput();
+}
+
+IOStreamTransport::IOStreamTransport(istream& _in, ostream& _out):
+	m_input{_in},
+	m_output{_out}
+{
+}
+
+bool IOStreamTransport::closed() const noexcept
+{
+	return m_input.eof();
+}
+
+std::string IOStreamTransport::readBytes(size_t _length)
+{
+	return util::readBytes(m_input, _length);
+}
+
+std::string IOStreamTransport::getline()
+{
+	string line;
+	std::getline(m_input, line);
+	return line;
+}
+
+void IOStreamTransport::writeBytes(std::string_view _data)
+{
+	m_output.write(_data.data(), static_cast<std::streamsize>(_data.size()));
+}
+
+void IOStreamTransport::flushOutput()
+{
+	m_output.flush();
+}
+
+StdioTransport::StdioTransport()
+{
+#if defined(_WIN32)
+	// On Windows, a LF is translated to CRLF, so we put the stdout stream to binary to avoid that.
+	_setmode(fileno(stdout), _O_BINARY);
+#endif
+}
+
+bool StdioTransport::closed() const noexcept
+{
+	return feof(stdin);
+}
+
+std::string StdioTransport::readBytes(size_t _byteCount)
+{
+	std::string buffer;
+	buffer.resize(_byteCount);
+	auto const n = fread(buffer.data(), 1, _byteCount, stdin);
+	if (n < _byteCount)
+		buffer.resize(n);
+	return buffer;
+}
+
+std::string StdioTransport::getline()
+{
+	string line;
+	std::getline(cin, line);
+	return line;
+}
+
+void StdioTransport::writeBytes(std::string_view _data)
+{
+	size_t const bytesWritten = fwrite(_data.data(), 1, _data.size(), stdout);
+	solAssert(bytesWritten == _data.size());
+}
+
+void StdioTransport::flushOutput()
+{
+	fflush(stdout);
 }
