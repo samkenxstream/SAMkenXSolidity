@@ -17,6 +17,7 @@
 // SPDX-License-Identifier: GPL-3.0
 
 #include <libsolidity/lsp/FileRepository.h>
+#include <libsolidity/lsp/Utils.h>
 #include <fmt/format.h>
 
 using namespace std;
@@ -36,7 +37,6 @@ string stripFilePrefix(string const& _path)
 
 }
 
-#define lspDebug(x) do { std::ofstream("C:\\Temp\\solc.log", std::ios_base::app) << (x) << std::endl; } while (0)
 string FileRepository::sourceUnitNameToClientPath(string const& _sourceUnitName) const
 {
 	if (m_sourceUnitNamesToClientPaths.count(_sourceUnitName))
@@ -52,14 +52,18 @@ string FileRepository::sourceUnitNameToClientPath(string const& _sourceUnitName)
 	else
 	{
 		auto basePath = m_fileReader.basePath();
-#if defined(_WIN32)
-		// Ensure basePath does contain Windows drive letter to fully qualify the path.
-		if (!basePath.has_root_name())
-			basePath = (boost::filesystem::current_path().root_path() / basePath).normalize();
-#endif
+// #if defined(_WIN32)
+// 		// Ensure basePath does contain Windows drive letter to fully qualify the path.
+// 		if (!basePath.has_root_name())
+// 			basePath = (boost::filesystem::current_path().root_path() / basePath).normalize();
+// #endif
 		auto const clientPath = basePath / _sourceUnitName;
 		lspDebug(fmt::format("sourceUnitNameToClientPath.C: {} -> {}", _sourceUnitName, clientPath.generic_string()));
+		#if defined(_WIN32)
+		return "file:///" + clientPath.generic_string();
+		#else
 		return "file://" + clientPath.generic_string();
+		#endif
 	}
 }
 

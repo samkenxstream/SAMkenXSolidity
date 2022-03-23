@@ -244,12 +244,15 @@ void LanguageServer::handleInitialize(MessageID _id, Json::Value const& _args)
 			ErrorCode::InvalidParams,
 			"rootUri only supports file URI scheme."
 		);
+		lspDebug(fmt::format("init: rootUri: {}", rootPath));
+		//TODO(pr) std::regex re("^file:///[A-Za-z]:/.*");
 
 		rootPath = rootPath.substr(7);
 	}
 	else if (Json::Value rootPath = _args["rootPath"])
 		rootPath = rootPath.asString();
 
+	lspDebug(fmt::format("create new file repository with root: {}", rootPath));
 	m_fileRepository = FileRepository(boost::filesystem::path(rootPath));
 	if (_args["initializationOptions"].isObject())
 		changeConfiguration(_args["initializationOptions"]);
