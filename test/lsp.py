@@ -781,7 +781,7 @@ class SolidityLSPTestSuite: # {{{
         """
 
         self.setup_lsp(solc)
-        FILE_A_URI = f'file://{self.project_root_dir}/a.sol'
+        FILE_A_URI = f'{self.project_root_uri}/a.sol'
         solc.send_message('textDocument/didOpen', {
             'textDocument': {
                 'uri': FILE_A_URI,
@@ -809,7 +809,7 @@ class SolidityLSPTestSuite: # {{{
         )
         reports = self.wait_for_diagnostics(solc, 1)
         self.expect_equal(len(reports), 1, '')
-        self.expect_equal(reports[0]['uri'], f'file://{self.project_root_dir}/lib.sol', "")
+        self.expect_equal(reports[0]['uri'], f'{self.project_root_uri}/lib.sol', "")
         self.expect_equal(len(reports[0]['diagnostics']), 0, "should not contain diagnostics")
 
 
