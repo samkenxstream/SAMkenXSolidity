@@ -239,15 +239,20 @@ void LanguageServer::handleInitialize(MessageID _id, Json::Value const& _args)
 	if (Json::Value uri = _args["rootUri"])
 	{
 		rootPath = uri.asString();
+		lspDebug(fmt::format("init: rootUri: {}", rootPath));
 		lspAssert(
 			boost::starts_with(rootPath, "file://"),
 			ErrorCode::InvalidParams,
 			"rootUri only supports file URI scheme."
 		);
-		lspDebug(fmt::format("init: rootUri: {}", rootPath));
-		//TODO(pr) std::regex re("^file:///[A-Za-z]:/.*");
 
-		rootPath = rootPath.substr(7);
+		// Strip "file://" for file URLs not containing windows drive letter,
+		// and "file:///" otherwise.
+		std::regex regexPattern("^file:///[A-Za-z]:/.*");
+		if (std::regex_match(rootPath, regexPattern))
+			rootPath = rootPath.substr(8);
+		else
+			rootPath = rootPath.substr(7);
 	}
 	else if (Json::Value rootPath = _args["rootPath"])
 		rootPath = rootPath.asString();
