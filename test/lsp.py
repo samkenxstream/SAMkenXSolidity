@@ -49,8 +49,10 @@ def countIndex(sequence, start=0):
         yield n, elem
         n += 1 + len(elem)
 
-# Filter the lines for tag comments and report line number that tags refer to
 def tagsOnly(lines, start=0):
+    """
+    Filter the lines for tag comments and report line number that tags refer to
+    """
     n = start
     numCommentLines = 0
 
@@ -71,7 +73,7 @@ def tagsOnly(lines, start=0):
         n += 1
 
 
-def preceedComments(sequence):
+def precedeComments(sequence):
     result = ""
     for line in sequence.splitlines(True):
         result = result + "// " + line
@@ -110,7 +112,7 @@ class JsonRpcProcess:
         return self
 
     # Reads a message without blocking
-    def read_message(self, peek=False, block=True):
+    def read_message(self, peek: bool = False, block: bool = True):
 #        print("read_message(" + str(peek) + ", " + str(block))
         timeout = 1 if block else 0
 
@@ -278,18 +280,6 @@ def extendEnd(marker, amount=1):
     newMarker = deepcopy(marker)
     newMarker["end"]["character"] += amount
     return newMarker
-
-class ReplacingTag:
-    def __init__(self, tagName, tagRange):
-        self.tagName = tagName
-        self.tagRange = tagRange
-
-def encode_tags(z):
-    print("default!: " + str(z))
-    if isinstance(z, ReplacingTag):
-        return tagName
-    raise TypeError(f'Object of type {o.__class__.__name__} '
-                    f'is not JSON serializable')
 
 class TestParserException(Exception):
     def __init__(self, incompleteResult, msg: str):
@@ -774,11 +764,12 @@ class SolidityLSPTestSuite: # {{{
                     break
                 except Exception as e:
                     print(e)
-                    print(self.get_file_tags(test))
                     print("(e)dit/(r)etry/(i)gnore?")
                     userResponse = sys.stdin.read(1)
                     if userResponse == "e":
-                        subprocess.getstatusoutput(f'$EDITOR {self.get_test_file_path(test)}')
+                        editor = os.environ.get('VISUAL', os.environ.get('EDITOR', 'vi'))
+                        subprocess.run(f'{editor} {self.get_test_file_path(test)}', shell=True)
+                        self.get_file_tags.cache_clear()
                         pass
                     elif userResponse == "r":
                         print("retrying...")
@@ -1040,7 +1031,7 @@ class SolidityLSPTestSuite: # {{{
                         testFails = False
                 except ExpectationFailed as e:
                     print(e)
-                    self.userInteractionFailedDiagnostics(solc, test, content, expectedDiagnostic.start, expectedDiagnostic.end)
+                    self.userInteractionFailedDiagnostics(solc, test, content, expectedDiagnostics.start, expectedDiagnostics.end)
                     continue
 
                 try:
@@ -1059,7 +1050,7 @@ class SolidityLSPTestSuite: # {{{
 
                             print("Received more diagnostics than expected: \n" +
                                 json.dumps(actualResponseJson["params"], indent=4, sort_keys=True))
-                            self.userInteractionFailedDiagnostics(solc, test, content, expectedDiagnostic.start, expectedDiagnostic.end)
+                            self.userInteractionFailedDiagnostics(solc, test, content, expectedDiagnostics.start, expectedDiagnostics.end)
                             break
 
 
@@ -1087,7 +1078,7 @@ class SolidityLSPTestSuite: # {{{
                             userResponse = sys.stdin.read(1)
                             if userResponse == "u":
                                 content = content[:testcase.responseBegin] + \
-                                    preceedComments("<- " + self.replace_ranges_with_tags(actualResponseJson)) + \
+                                    precedeComments("<- " + self.replace_ranges_with_tags(actualResponseJson)) + \
                                     content[testcase.responseEnd:]
 
                                 with open(self.get_test_file_path(test), mode="w", encoding="utf-8", newline='') as f:
@@ -1097,8 +1088,6 @@ class SolidityLSPTestSuite: # {{{
                 except TestParserException as e:
                     print(e)
                     print(e.result)
-
-
 
 
     def test_textDocument_didChange_updates_diagnostics(self, solc: JsonRpcProcess) -> None:
