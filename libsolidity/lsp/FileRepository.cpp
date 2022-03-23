@@ -40,29 +40,17 @@ string stripFilePrefix(string const& _path)
 string FileRepository::sourceUnitNameToClientPath(string const& _sourceUnitName) const
 {
 	if (m_sourceUnitNamesToClientPaths.count(_sourceUnitName))
-	{
-		lspDebug(fmt::format("sourceUnitNameToClientPath.A: {} -> {}", _sourceUnitName, m_sourceUnitNamesToClientPaths.at(_sourceUnitName)));
 		return m_sourceUnitNamesToClientPaths.at(_sourceUnitName);
-	}
 	else if (_sourceUnitName.find("file://") == 0)
-	{
-		lspDebug(fmt::format("sourceUnitNameToClientPath.B: {}", _sourceUnitName));
 		return _sourceUnitName;
-	}
 	else
 	{
 		auto basePath = m_fileReader.basePath();
-// #if defined(_WIN32)
-// 		// Ensure basePath does contain Windows drive letter to fully qualify the path.
-// 		if (!basePath.has_root_name())
-// 			basePath = (boost::filesystem::current_path().root_path() / basePath).normalize();
-// #endif
-		auto const clientPath = basePath / _sourceUnitName;
-		lspDebug(fmt::format("sourceUnitNameToClientPath.C: {} -> {}", _sourceUnitName, clientPath.generic_string()));
+		auto const clientPath = (basePath / _sourceUnitName).generic_string();
 		#if defined(_WIN32)
-		return "file:///" + clientPath.generic_string();
+		return "file:///" + clientPath;
 		#else
-		return "file://" + clientPath.generic_string();
+		return "file://" + clientPath;
 		#endif
 	}
 }
@@ -81,7 +69,6 @@ void FileRepository::setSourceByClientPath(string const& _uri, string _text)
 {
 	// This is needed for uris outside the base path. It can lead to collisions,
 	// but we need to mostly rewrite this in a future version anyway.
-	lspDebug(fmt::format("setSourceByClientPath: {}", _uri));
 	m_sourceUnitNamesToClientPaths.emplace(clientPathToSourceUnitName(_uri), _uri);
 	m_fileReader.addOrUpdateFile(stripFilePrefix(_uri), move(_text));
 }
