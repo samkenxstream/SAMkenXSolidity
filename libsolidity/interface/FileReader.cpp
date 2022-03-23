@@ -233,6 +233,7 @@ boost::filesystem::path FileReader::normalizeCLIPathForVFS(
 	// - Ensures that forward slashes are used as path separators on all platforms.
 	// - Removes the root name (e.g. drive letter on Windows) when it matches the root name in the
 	//   path to the current working directory.
+	// ^ NOTE(ChrisP): The item above works directly against file URIs on Windows OS that do contain drive letters.
 	//
 	// Also note that this function:
 	// - Does NOT resolve symlinks (except for symlinks in the path to the current working directory)
@@ -317,8 +318,9 @@ boost::filesystem::path FileReader::normalizeCLIRootPathForVFS(
 		return rootPath;
 
 	// Ignore drive letter case on Windows (C:\ <=> c:\).
-	if (boost::filesystem::equivalent(rootPath, baseRootPath))
-		return "/";
+	// if (boost::filesystem::equivalent(rootPath, baseRootPath))
+	// 	return "/";
+	// ^^^ Might be causing the problems I'm having with file://C:/... URLs on Windows + LSP.
 
 	return rootPath;
 }
