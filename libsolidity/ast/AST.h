@@ -358,7 +358,7 @@ public:
 	):
 		Declaration(_id, _location, _unitAlias, std::move(_unitAliasLocation)),
 		m_path(std::move(_path)),
-		m_symbolAliases(move(_symbolAliases))
+		m_symbolAliases(std::move(_symbolAliases))
 	{ }
 
 	void accept(ASTVisitor& _visitor) override;
@@ -587,10 +587,19 @@ private:
 class IdentifierPath: public ASTNode
 {
 public:
-	IdentifierPath(int64_t _id, SourceLocation const& _location, std::vector<ASTString> _path):
-		ASTNode(_id, _location), m_path(std::move(_path)) {}
+	IdentifierPath(
+		int64_t _id,
+		SourceLocation const& _location,
+		std::vector<ASTString> _path,
+		std::vector<SourceLocation> _pathLocations
+	):
+		ASTNode(_id, _location), m_path(std::move(_path)), m_pathLocations(std::move(_pathLocations))
+	{
+		solAssert(m_pathLocations.size() == m_path.size());
+	}
 
 	std::vector<ASTString> const& path() const { return m_path; }
+	std::vector<SourceLocation > const& pathLocations() const { return m_pathLocations; }
 	IdentifierPathAnnotation& annotation() const override
 	{
 		return initAnnotation<IdentifierPathAnnotation>();
@@ -600,6 +609,8 @@ public:
 	void accept(ASTConstVisitor& _visitor) const override;
 private:
 	std::vector<ASTString> m_path;
+	// Corresponding locations for m_path. Array has same length and indices as m_path.
+	std::vector<SourceLocation> m_pathLocations;
 };
 
 class InheritanceSpecifier: public ASTNode
@@ -633,10 +644,9 @@ private:
 /**
  * Using for directive:
  *
- * 1. `using LibraryName for T` attaches all functions from the library `LibraryName` to the type `T`
+ * 1. `using LibraryName for T` attaches all functions from the library `LibraryName` to the type `T`.
  * 2. `using LibraryName for *` attaches to all types.
- * 3. `using {f1, f2, ..., fn} for T` attaches the functions `f1`, `f2`, ...,
- *     `fn`, respectively to `T`.
+ * 3. `using {f1, f2, ..., fn} for T` attaches the functions `f1`, `f2`, ..., `fn`, respectively to `T`.
  *
  * For version 3, T has to be implicitly convertible to the first parameter type of
  * all functions, and this is checked at the point of the using statement. For versions 1 and
@@ -652,13 +662,13 @@ public:
 	UsingForDirective(
 		int64_t _id,
 		SourceLocation const& _location,
-		std::vector<ASTPointer<IdentifierPath>> _functions,
+		std::vector<ASTPointer<IdentifierPath>> _functionsOrLibrary,
 		bool _usesBraces,
 		ASTPointer<TypeName> _typeName,
 		bool _global
 	):
 		ASTNode(_id, _location),
-		m_functions(_functions),
+		m_functionsOrLibrary(std::move(_functionsOrLibrary)),
 		m_usesBraces(_usesBraces),
 		m_typeName(std::move(_typeName)),
 		m_global{_global}
@@ -672,13 +682,13 @@ public:
 	TypeName const* typeName() const { return m_typeName.get(); }
 
 	/// @returns a list of functions or the single library.
-	std::vector<ASTPointer<IdentifierPath>> const& functionsOrLibrary() const { return m_functions; }
+	std::vector<ASTPointer<IdentifierPath>> const& functionsOrLibrary() const { return m_functionsOrLibrary; }
 	bool usesBraces() const { return m_usesBraces; }
 	bool global() const { return m_global; }
 
 private:
 	/// Either the single library or a list of functions.
-	std::vector<ASTPointer<IdentifierPath>> m_functions;
+	std::vector<ASTPointer<IdentifierPath>> m_functionsOrLibrary;
 	bool m_usesBraces;
 	ASTPointer<TypeName> m_typeName;
 	bool m_global = false;
@@ -1417,18 +1427,37 @@ public:
 		int64_t _id,
 		SourceLocation const& _location,
 		ASTPointer<TypeName> _keyType,
-		ASTPointer<TypeName> _valueType
+		ASTPointer<ASTString> _keyName,
+		SourceLocation _keyNameLocation,
+		ASTPointer<TypeName> _valueType,
+		ASTPointer<ASTString> _valueName,
+		SourceLocation _valueNameLocation
 	):
-		TypeName(_id, _location), m_keyType(std::move(_keyType)), m_valueType(std::move(_valueType)) {}
+		TypeName(_id, _location),
+		m_keyType(std::move(_keyType)),
+		m_keyName(std::move(_keyName)),
+		m_keyNameLocation(std::move(_keyNameLocation)),
+		m_valueType(std::move(_valueType)),
+		m_valueName(std::move(_valueName)),
+		m_valueNameLocation(std::move(_valueNameLocation))
+	{}
 	void accept(ASTVisitor& _visitor) override;
 	void accept(ASTConstVisitor& _visitor) const override;
 
 	TypeName const& keyType() const { return *m_keyType; }
+	ASTString keyName() const { return *m_keyName; }
+	SourceLocation keyNameLocation() const { return m_keyNameLocation; }
 	TypeName const& valueType() const { return *m_valueType; }
+	ASTString valueName() const { return *m_valueName; }
+	SourceLocation valueNameLocation() const { return m_valueNameLocation; }
 
 private:
 	ASTPointer<TypeName> m_keyType;
+	ASTPointer<ASTString> m_keyName;
+	SourceLocation m_keyNameLocation;
 	ASTPointer<TypeName> m_valueType;
+	ASTPointer<ASTString> m_valueName;
+	SourceLocation m_valueNameLocation;
 };
 
 /**
@@ -1492,7 +1521,7 @@ public:
 	):
 		Statement(_id, _location, _docString),
 		m_dialect(_dialect),
-		m_flags(move(_flags)),
+		m_flags(std::move(_flags)),
 		m_operations(std::move(_operations))
 	{}
 	void accept(ASTVisitor& _visitor) override;
@@ -2094,9 +2123,14 @@ public:
 		SourceLocation const& _location,
 		ASTPointer<Expression> _expression,
 		std::vector<ASTPointer<Expression>> _arguments,
-		std::vector<ASTPointer<ASTString>> _names
+		std::vector<ASTPointer<ASTString>> _names,
+		std::vector<SourceLocation> _nameLocations
 	):
-		Expression(_id, _location), m_expression(std::move(_expression)), m_arguments(std::move(_arguments)), m_names(std::move(_names)) {}
+		Expression(_id, _location), m_expression(std::move(_expression)), m_arguments(std::move(_arguments)), m_names(std::move(_names)), m_nameLocations(std::move(_nameLocations))
+	{
+		solAssert(m_nameLocations.size() == m_names.size());
+	}
+
 	void accept(ASTVisitor& _visitor) override;
 	void accept(ASTConstVisitor& _visitor) const override;
 
@@ -2109,6 +2143,7 @@ public:
 	/// in the order they were written.
 	/// If this is not a named call, this is empty.
 	std::vector<ASTPointer<ASTString>> const& names() const { return m_names; }
+	std::vector<SourceLocation> const& nameLocations() const { return m_nameLocations; }
 
 	FunctionCallAnnotation& annotation() const override;
 
@@ -2116,6 +2151,7 @@ private:
 	ASTPointer<Expression> m_expression;
 	std::vector<ASTPointer<Expression>> m_arguments;
 	std::vector<ASTPointer<ASTString>> m_names;
+	std::vector<SourceLocation> m_nameLocations;
 };
 
 /**
@@ -2179,19 +2215,27 @@ public:
 		int64_t _id,
 		SourceLocation const& _location,
 		ASTPointer<Expression> _expression,
-		ASTPointer<ASTString> _memberName
+		ASTPointer<ASTString> _memberName,
+		SourceLocation _memberLocation
 	):
-		Expression(_id, _location), m_expression(std::move(_expression)), m_memberName(std::move(_memberName)) {}
+		Expression(_id, _location),
+		m_expression(std::move(_expression)),
+		m_memberName(std::move(_memberName)),
+		m_memberLocation(std::move(_memberLocation))
+	{}
+
 	void accept(ASTVisitor& _visitor) override;
 	void accept(ASTConstVisitor& _visitor) const override;
 	Expression const& expression() const { return *m_expression; }
 	ASTString const& memberName() const { return *m_memberName; }
+	SourceLocation const& memberLocation() const { return m_memberLocation; }
 
 	MemberAccessAnnotation& annotation() const override;
 
 private:
 	ASTPointer<Expression> m_expression;
 	ASTPointer<ASTString> m_memberName;
+	SourceLocation m_memberLocation;
 };
 
 /**

@@ -59,6 +59,7 @@ private:
 	ASTPointer<T> createASTNode(Json::Value const& _node, Args&&... _args);
 	/// @returns the sourceLocation-object created from the string in the JSON node
 	langutil::SourceLocation const createSourceLocation(Json::Value const& _node);
+	std::optional<std::vector<langutil::SourceLocation>> createSourceLocations(Json::Value const& _node) const;
 	/// Creates an ASTNode for a given JSON-ast of unknown type
 	/// @returns Pointer to a new created ASTNode
 	ASTPointer<ASTNode> convertJsonToASTNode(Json::Value const& _ast);
@@ -68,6 +69,10 @@ private:
 	ASTPointer<T> convertJsonToASTNode(Json::Value const& _node);
 
 	langutil::SourceLocation createNameSourceLocation(Json::Value const& _node);
+	/// @returns source location of a mapping key name
+	langutil::SourceLocation createKeyNameSourceLocation(Json::Value const& _node);
+	/// @returns source location of a mapping value name
+	langutil::SourceLocation createValueNameSourceLocation(Json::Value const& _node);
 
 	/// \defgroup nodeCreators JSON to AST-Nodes
 	///@{

@@ -54,7 +54,7 @@ class SMTEncoder: public ASTConstVisitor
 public:
 	SMTEncoder(
 		smt::EncodingContext& _context,
-		ModelCheckerSettings const& _settings,
+		ModelCheckerSettings _settings,
 		langutil::UniqueErrorReporter& _errorReporter,
 		langutil::CharStreamProvider const& _charStreamProvider
 	);
@@ -401,7 +401,7 @@ protected:
 	void createReturnedExpressions(FunctionCall const& _funCall, ContractDefinition const* _contextContract);
 
 	/// @returns the symbolic arguments for a function call,
-	/// taking into account bound functions and
+	/// taking into account attached functions and
 	/// type conversion.
 	std::vector<smtutil::Expression> symbolicArguments(FunctionCall const& _funCall, ContractDefinition const* _contextContract);
 
@@ -483,7 +483,7 @@ protected:
 	/// Stores the context of the encoding.
 	smt::EncodingContext& m_context;
 
-	ModelCheckerSettings const& m_settings;
+	ModelCheckerSettings m_settings;
 
 	/// Character stream for each source,
 	/// used for retrieving source text of expressions for e.g. counter-examples.

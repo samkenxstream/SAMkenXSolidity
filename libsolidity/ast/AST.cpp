@@ -27,7 +27,10 @@
 #include <libsolidity/ast/ASTVisitor.h>
 #include <libsolidity/ast/AST_accept.h>
 #include <libsolidity/ast/TypeProvider.h>
+#include <libsolutil/FunctionSelector.h>
 #include <libsolutil/Keccak256.h>
+
+#include <range/v3/view/tail.hpp>
 
 #include <boost/algorithm/string.hpp>
 
@@ -37,6 +40,17 @@
 using namespace std;
 using namespace solidity;
 using namespace solidity::frontend;
+
+namespace
+{
+TryCatchClause const* findClause(vector<ASTPointer<TryCatchClause>> const& _clauses, optional<string> _errorName = {})
+{
+	for (auto const& clause: ranges::views::tail(_clauses))
+		if (_errorName.has_value() ? clause->errorName() == _errorName : clause->errorName().empty())
+			return clause.get();
+	return nullptr;
+}
+}
 
 ASTNode::ASTNode(int64_t _id, SourceLocation _location):
 	m_id(static_cast<size_t>(_id)),
@@ -239,7 +253,7 @@ vector<ErrorDefinition const*> ContractDefinition::interfaceErrors(bool _require
 		result +=
 			(*annotation().creationCallGraph)->usedErrors +
 			(*annotation().deployedCallGraph)->usedErrors;
-	return util::convertContainer<vector<ErrorDefinition const*>>(move(result));
+	return util::convertContainer<vector<ErrorDefinition const*>>(std::move(result));
 }
 
 vector<pair<util::FixedHash<4>, FunctionTypePointer>> const& ContractDefinition::interfaceFunctionList(bool _includeInheritedFunctions) const
@@ -268,8 +282,7 @@ vector<pair<util::FixedHash<4>, FunctionTypePointer>> const& ContractDefinition:
 				if (signaturesSeen.count(functionSignature) == 0)
 				{
 					signaturesSeen.insert(functionSignature);
-					util::FixedHash<4> hash(util::keccak256(functionSignature));
-					interfaceFunctionList.emplace_back(hash, fun);
+					interfaceFunctionList.emplace_back(util::selectorFromSignatureH32(functionSignature), fun);
 				}
 			}
 		}
@@ -981,26 +994,14 @@ TryCatchClause const* TryStatement::successClause() const
 	return m_clauses[0].get();
 }
 
-TryCatchClause const* TryStatement::panicClause() const
-{
-	for (size_t i = 1; i < m_clauses.size(); ++i)
-		if (m_clauses[i]->errorName() == "Panic")
-			return m_clauses[i].get();
-	return nullptr;
+TryCatchClause const* TryStatement::panicClause() const {
+	return findClause(m_clauses, "Panic");
 }
 
-TryCatchClause const* TryStatement::errorClause() const
-{
-	for (size_t i = 1; i < m_clauses.size(); ++i)
-		if (m_clauses[i]->errorName() == "Error")
-			return m_clauses[i].get();
-	return nullptr;
+TryCatchClause const* TryStatement::errorClause() const {
+	return findClause(m_clauses, "Error");
 }
 
-TryCatchClause const* TryStatement::fallbackClause() const
-{
-	for (size_t i = 1; i < m_clauses.size(); ++i)
-		if (m_clauses[i]->errorName().empty())
-			return m_clauses[i].get();
-	return nullptr;
+TryCatchClause const* TryStatement::fallbackClause() const {
+	return findClause(m_clauses);
 }

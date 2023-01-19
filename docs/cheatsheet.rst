@@ -24,7 +24,7 @@ Global Variables
 - ``abi.encodeCall(function functionPointer, (...)) returns (bytes memory)``: ABI-encodes a call to ``functionPointer`` with the arguments found in the
   tuple. Performs a full type-check, ensuring the types match the function signature. Result equals ``abi.encodeWithSelector(functionPointer.selector, (...))``
 - ``abi.encodeWithSignature(string memory signature, ...) returns (bytes memory)``: Equivalent
-  to ``abi.encodeWithSelector(bytes4(keccak256(bytes(signature)), ...)``
+  to ``abi.encodeWithSelector(bytes4(keccak256(bytes(signature))), ...)``
 - ``bytes.concat(...) returns (bytes memory)``: :ref:`Concatenates variable number of
   arguments to one byte array<bytes-concat>`
 - ``string.concat(...) returns (string memory)``: :ref:`Concatenates variable number of
@@ -112,13 +112,3 @@ Modifiers
 - ``override``: States that this function, modifier or public state variable changes
   the behaviour of a function or modifier in a base contract.
 
-Reserved Keywords
-=================
-
-These keywords are reserved in Solidity. They might become part of the syntax in the future:
-
-``after``, ``alias``, ``apply``, ``auto``, ``byte``, ``case``, ``copyof``, ``default``,
-``define``, ``final``, ``implements``, ``in``, ``inline``, ``let``, ``macro``, ``match``,
-``mutable``, ``null``, ``of``, ``partial``, ``promise``, ``reference``, ``relocatable``,
-``sealed``, ``sizeof``, ``static``, ``supports``, ``switch``, ``typedef``, ``typeof``,
-``var``.

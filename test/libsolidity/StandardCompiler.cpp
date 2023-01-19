@@ -1082,6 +1082,8 @@ BOOST_AUTO_TEST_CASE(evm_version)
 	BOOST_CHECK(result["contracts"]["fileA"]["A"]["metadata"].asString().find("\"evmVersion\":\"berlin\"") != string::npos);
 	result = compile(inputForVersion("\"evmVersion\": \"london\","));
 	BOOST_CHECK(result["contracts"]["fileA"]["A"]["metadata"].asString().find("\"evmVersion\":\"london\"") != string::npos);
+	result = compile(inputForVersion("\"evmVersion\": \"paris\","));
+	BOOST_CHECK(result["contracts"]["fileA"]["A"]["metadata"].asString().find("\"evmVersion\":\"paris\"") != string::npos);
 	// test default
 	result = compile(inputForVersion(""));
 	BOOST_CHECK(result["contracts"]["fileA"]["A"]["metadata"].asString().find("\"evmVersion\":\"london\"") != string::npos);
@@ -1247,7 +1249,10 @@ BOOST_AUTO_TEST_CASE(optimizer_settings_details_different)
 		(set<string>{"stackAllocation", "optimizerSteps"})
 	);
 	BOOST_CHECK(optimizer["details"]["yulDetails"]["stackAllocation"].asBool() == true);
-	BOOST_CHECK(optimizer["details"]["yulDetails"]["optimizerSteps"].asString() == OptimiserSettings::DefaultYulOptimiserSteps);
+	BOOST_CHECK(
+		optimizer["details"]["yulDetails"]["optimizerSteps"].asString() ==
+		OptimiserSettings::DefaultYulOptimiserSteps + ":"s + OptimiserSettings::DefaultYulOptimiserCleanupSteps
+ 	);
 	BOOST_CHECK_EQUAL(optimizer["details"].getMemberNames().size(), 9);
 	BOOST_CHECK(optimizer["runs"].asUInt() == 600);
 }

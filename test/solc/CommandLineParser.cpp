@@ -213,7 +213,7 @@ BOOST_AUTO_TEST_CASE(cli_mode_options)
 			{true, false},
 			{{InvariantType::Contract, InvariantType::Reentrancy}},
 			true,
-			{false, true, true},
+			{false, false, true, true},
 			{{VerificationTargetType::Underflow, VerificationTargetType::DivByZero}},
 			5,
 		};
@@ -222,6 +222,15 @@ BOOST_AUTO_TEST_CASE(cli_mode_options)
 
 		BOOST_TEST(parsedOptions == expectedOptions);
 	}
+}
+
+BOOST_AUTO_TEST_CASE(no_cbor_metadata)
+{
+	vector<string> commandLine = {"solc", "--no-cbor-metadata", "contract.sol"};
+	CommandLineOptions parsedOptions = parseCommandLine(commandLine);
+	bool assert = parsedOptions.metadata.format == CompilerStack::MetadataFormat::NoMetadata;
+
+	BOOST_TEST(assert);
 }
 
 BOOST_AUTO_TEST_CASE(via_ir_options)
@@ -281,20 +290,6 @@ BOOST_AUTO_TEST_CASE(assembly_mode_options)
 			"--libraries="
 				"dir1/file1.sol:L=0x1234567890123456789012345678901234567890,"
 				"dir2/file2.sol:L=0x1111122222333334444455555666667777788888",
-			"--metadata-hash=swarm",       // Ignored in assembly mode
-			"--metadata-literal",          // Ignored in assembly mode
-			"--model-checker-contracts="   // Ignored in assembly mode
-				"contract1.yul:A,"
-				"contract2.yul:B",
-			"--model-checker-div-mod-no-slacks", // Ignored in assembly mode
-			"--model-checker-engine=bmc",  // Ignored in assembly mode
-			"--model-checker-invariants=contract,reentrancy",  // Ignored in assembly mode
-			"--model-checker-show-unproved", // Ignored in assembly mode
-			"--model-checker-solvers=z3,smtlib2", // Ignored in assembly mode
-			"--model-checker-targets="     // Ignored in assembly mode
-				"underflow,"
-				"divByZero",
-			"--model-checker-timeout=5",   // Ignored in assembly mode
 			"--asm",
 			"--bin",
 			"--ir-optimized",
@@ -378,20 +373,6 @@ BOOST_AUTO_TEST_CASE(standard_json_mode_options)
 			"dir2/file2.sol:L=0x1111122222333334444455555666667777788888",
 		"--gas",                           // Accepted but has no effect in Standard JSON mode
 		"--combined-json=abi,bin",         // Accepted but has no effect in Standard JSON mode
-		"--metadata-hash=swarm",           // Ignored in Standard JSON mode
-		"--metadata-literal",              // Ignored in Standard JSON mode
-		"--model-checker-contracts="       // Ignored in Standard JSON mode
-			"contract1.yul:A,"
-			"contract2.yul:B",
-		"--model-checker-div-mod-no-slacks", // Ignored in Standard JSON mode
-		"--model-checker-engine=bmc",      // Ignored in Standard JSON mode
-		"--model-checker-invariants=contract,reentrancy",      // Ignored in Standard JSON mode
-		"--model-checker-show-unproved",      // Ignored in Standard JSON mode
-		"--model-checker-solvers=z3,smtlib2", // Ignored in Standard JSON mode
-		"--model-checker-targets="         // Ignored in Standard JSON mode
-			"underflow,"
-			"divByZero",
-		"--model-checker-timeout=5",       // Ignored in Standard JSON mode
 	};
 
 	CommandLineOptions expectedOptions;
@@ -424,20 +405,118 @@ BOOST_AUTO_TEST_CASE(invalid_options_input_modes_combinations)
 		// TODO: This should eventually contain all options.
 		{"--error-recovery", {"--assemble", "--yul", "--strict-assembly", "--standard-json", "--link"}},
 		{"--experimental-via-ir", {"--assemble", "--yul", "--strict-assembly", "--standard-json", "--link"}},
-		{"--via-ir", {"--assemble", "--yul", "--strict-assembly", "--standard-json", "--link"}}
+		{"--via-ir", {"--assemble", "--yul", "--strict-assembly", "--standard-json", "--link"}},
+		{"--metadata-literal", {"--assemble", "--yul", "--strict-assembly", "--standard-json", "--link"}},
+		{"--metadata-hash=swarm", {"--assemble", "--yul", "--strict-assembly", "--standard-json", "--link"}},
+		{"--model-checker-show-unproved", {"--assemble", "--yul", "--strict-assembly", "--standard-json", "--link"}},
+		{"--model-checker-div-mod-no-slacks", {"--assemble", "--yul", "--strict-assembly", "--standard-json", "--link"}},
+		{"--model-checker-engine=bmc", {"--assemble", "--yul", "--strict-assembly", "--standard-json", "--link"}},
+		{"--model-checker-invariants=contract,reentrancy", {"--assemble", "--yul", "--strict-assembly", "--standard-json", "--link"}},
+		{"--model-checker-solvers=z3,smtlib2", {"--assemble", "--yul", "--strict-assembly", "--standard-json", "--link"}},
+		{"--model-checker-timeout=5", {"--assemble", "--yul", "--strict-assembly", "--standard-json", "--link"}},
+		{"--model-checker-contracts=contract1.yul:A,contract2.yul:B", {"--assemble", "--yul", "--strict-assembly", "--standard-json", "--link"}},
+		{"--model-checker-targets=underflow,divByZero", {"--assemble", "--yul", "--strict-assembly", "--standard-json", "--link"}}
 	};
 
 	for (auto const& [optionName, inputModes]: invalidOptionInputModeCombinations)
 		for (string const& inputMode: inputModes)
 		{
 			stringstream serr;
+			size_t separatorPosition = optionName.find("=");
+			string optionNameWithoutValue = optionName.substr(0, separatorPosition);
+			soltestAssert(!optionNameWithoutValue.empty());
+
 			vector<string> commandLine = {"solc", optionName, "file", inputMode};
 
-			string expectedMessage = "The following options are not supported in the current input mode: " + optionName;
+			string expectedMessage = "The following options are not supported in the current input mode: " + optionNameWithoutValue;
 			auto hasCorrectMessage = [&](CommandLineValidationError const& _exception) { return _exception.what() == expectedMessage; };
 
 			BOOST_CHECK_EXCEPTION(parseCommandLine(commandLine), CommandLineValidationError, hasCorrectMessage);
 		}
+}
+
+BOOST_AUTO_TEST_CASE(default_optimiser_sequence)
+{
+	CommandLineOptions const& commandLineOptions = parseCommandLine({"solc", "contract.sol", "--optimize"});
+	BOOST_CHECK_EQUAL(commandLineOptions.optimiserSettings().yulOptimiserSteps, OptimiserSettings::DefaultYulOptimiserSteps);
+	BOOST_CHECK_EQUAL(commandLineOptions.optimiserSettings().yulOptimiserCleanupSteps, OptimiserSettings::DefaultYulOptimiserCleanupSteps);
+}
+
+BOOST_AUTO_TEST_CASE(valid_optimiser_sequences)
+{
+	vector<string> validSequenceInputs {
+		":",                         // Empty optimization sequence and empty cleanup sequence
+		":fDn",                      // Empty optimization sequence and specified cleanup sequence
+		"dhfoDgvulfnTUtnIf:",        // Specified optimization sequence and empty cleanup sequence
+		"dhfoDgvulfnTUtnIf:fDn",     // Specified optimization sequence and cleanup sequence
+		"dhfo[Dgvulfn]TUtnIf:f[D]n", // Specified and nested optimization and cleanup sequence
+		"dhfoDgvulfnTUtnIf",         // Specified optimizer sequence only
+		"iDu",                       // Short optimizer sequence
+		"a[[a][[aa]aa[aa]][]]aaa[aa[aa[aa]]]a[a][a][a]a[a]" // Nested brackets
+	};
+
+	vector<tuple<string, string>> const expectedParsedSequences {
+		{"", ""},
+		{"", "fDn"},
+		{"dhfoDgvulfnTUtnIf", ""},
+		{"dhfoDgvulfnTUtnIf", "fDn"},
+		{"dhfo[Dgvulfn]TUtnIf", "f[D]n"},
+		{"dhfoDgvulfnTUtnIf", OptimiserSettings::DefaultYulOptimiserCleanupSteps},
+		{"iDu", OptimiserSettings::DefaultYulOptimiserCleanupSteps},
+		{"a[[a][[aa]aa[aa]][]]aaa[aa[aa[aa]]]a[a][a][a]a[a]", OptimiserSettings::DefaultYulOptimiserCleanupSteps}
+	};
+
+	BOOST_CHECK_EQUAL(validSequenceInputs.size(), expectedParsedSequences.size());
+
+	for (size_t i = 0; i < validSequenceInputs.size(); ++i)
+	{
+		CommandLineOptions const& commandLineOptions = parseCommandLine({"solc", "contract.sol", "--optimize", "--yul-optimizations=" + validSequenceInputs[i]});
+		auto const& [expectedYulOptimiserSteps, expectedYulCleanupSteps] = expectedParsedSequences[i];
+		BOOST_CHECK_EQUAL(commandLineOptions.optimiserSettings().yulOptimiserSteps, expectedYulOptimiserSteps);
+		BOOST_CHECK_EQUAL(commandLineOptions.optimiserSettings().yulOptimiserCleanupSteps, expectedYulCleanupSteps);
+	}
+}
+
+BOOST_AUTO_TEST_CASE(invalid_optimiser_sequences)
+{
+	vector<string> const invalidSequenceInputs {
+		"abcdefg{hijklmno}pqr[st]uvwxyz", // Invalid abbreviation
+		"[[[[[[[[[[[[[[[[[[[[[[[[[[[[[["
+		"[[[[[[[[[[[[[[[[[[[[[[[[[[[[[["
+		"[[[[[[[[[[[[[[[[[[[[[[[[[[[[[["
+		"[[[[[[[[[[[[[[[[[[[[[[[[[[[[[["
+		"[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[a]"
+		"]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]"
+		"]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]"
+		"]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]"
+		"]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]"
+		"]]]]]]]]]]]]]]]]]]]]]]]]]]]]]",  // Brackets nested too deep
+		"a]a][",                          // Unbalanced closing bracket
+		"a[a][",                          // Unbalanced opening bracket
+		"dhfoDgvulfnTUt[nIf:fd]N",        // Nested cleanup sequence delimiter
+		"dhfoDgvulfnTU:tnIf:fdN"          // Too many cleanup sequence delimiters
+	};
+
+	vector<string> const expectedErrorMessages {
+		"'b' is not a valid step abbreviation",
+		"Brackets nested too deep",
+		"Unbalanced brackets",
+		"Unbalanced brackets",
+		"Cleanup sequence delimiter cannot be placed inside the brackets",
+		"Too many cleanup sequence delimiters"
+	};
+
+	BOOST_CHECK_EQUAL(invalidSequenceInputs.size(), expectedErrorMessages.size());
+
+	string const baseExpectedErrorMessage = "Invalid optimizer step sequence in --yul-optimizations: ";
+
+	for (size_t i = 0; i < invalidSequenceInputs.size(); ++i)
+	{
+		vector<string> const commandLineOptions = {"solc", "contract.sol", "--optimize", "--yul-optimizations=" + invalidSequenceInputs[i]};
+		string const expectedErrorMessage = baseExpectedErrorMessage + expectedErrorMessages[i];
+		auto hasCorrectMessage = [&](CommandLineValidationError const& _exception) { return _exception.what() == expectedErrorMessage; };
+		BOOST_CHECK_EXCEPTION(parseCommandLine(commandLineOptions), CommandLineValidationError, hasCorrectMessage);
+	}
 }
 
 BOOST_AUTO_TEST_SUITE_END()

@@ -21,20 +21,24 @@
 
 #pragma once
 
-#include <libevmasm/Instruction.h>
-
 #include <optional>
 #include <string>
 
 #include <boost/operators.hpp>
 
 
+namespace solidity::evmasm
+{
+/// Virtual machine bytecode instruction. Forward declared from libevmasm/Instruction.h
+enum class Instruction: uint8_t;
+}
+
 namespace solidity::langutil
 {
 
 /**
  * A version specifier of the EVM we want to compile to.
- * Defaults to the latest version deployed on Ethereum mainnet at the time of compiler release.
+ * Defaults to the latest version deployed on Ethereum Mainnet at the time of compiler release.
  */
 class EVMVersion:
 	boost::less_than_comparable<EVMVersion>,
@@ -52,10 +56,11 @@ public:
 	static EVMVersion istanbul() { return {Version::Istanbul}; }
 	static EVMVersion berlin() { return {Version::Berlin}; }
 	static EVMVersion london() { return {Version::London}; }
+	static EVMVersion paris() { return {Version::Paris}; }
 
 	static std::optional<EVMVersion> fromString(std::string const& _version)
 	{
-		for (auto const& v: {homestead(), tangerineWhistle(), spuriousDragon(), byzantium(), constantinople(), petersburg(), istanbul(), berlin(), london()})
+		for (auto const& v: {homestead(), tangerineWhistle(), spuriousDragon(), byzantium(), constantinople(), petersburg(), istanbul(), berlin(), london(), paris()})
 			if (_version == v.name())
 				return v;
 		return std::nullopt;
@@ -77,6 +82,7 @@ public:
 		case Version::Istanbul: return "istanbul";
 		case Version::Berlin: return "berlin";
 		case Version::London: return "london";
+		case Version::Paris: return "paris";
 		}
 		return "INVALID";
 	}
@@ -98,7 +104,7 @@ public:
 	bool canOverchargeGasForCall() const { return *this >= tangerineWhistle(); }
 
 private:
-	enum class Version { Homestead, TangerineWhistle, SpuriousDragon, Byzantium, Constantinople, Petersburg, Istanbul, Berlin, London };
+	enum class Version { Homestead, TangerineWhistle, SpuriousDragon, Byzantium, Constantinople, Petersburg, Istanbul, Berlin, London, Paris };
 
 	EVMVersion(Version _version): m_version(_version) {}
 

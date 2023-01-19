@@ -103,6 +103,10 @@
                   {
                     "id": 7,
                     "name": "MyAddress",
+                    "nameLocations":
+                    [
+                      "67:9:1"
+                    ],
                     "nodeType": "IdentifierPath",
                     "referencedDeclaration": 2,
                     "src": "67:9:1"
@@ -153,6 +157,10 @@
                   {
                     "id": 11,
                     "name": "MyUInt",
+                    "nameLocations":
+                    [
+                      "84:6:1"
+                    ],
                     "nodeType": "IdentifierPath",
                     "referencedDeclaration": 4,
                     "src": "84:6:1"
@@ -279,6 +287,8 @@
           "typeName":
           {
             "id": 25,
+            "keyName": "",
+            "keyNameLocation": "-1:-1:-1",
             "keyType":
             {
               "id": 22,
@@ -287,6 +297,10 @@
               {
                 "id": 21,
                 "name": "MyAddress",
+                "nameLocations":
+                [
+                  "177:9:1"
+                ],
                 "nodeType": "IdentifierPath",
                 "referencedDeclaration": 18,
                 "src": "177:9:1"
@@ -306,6 +320,8 @@
               "typeIdentifier": "t_mapping$_t_userDefinedValueType$_MyAddress_$18_$_t_userDefinedValueType$_MyUInt_$20_$",
               "typeString": "mapping(C.MyAddress => C.MyUInt)"
             },
+            "valueName": "",
+            "valueNameLocation": "-1:-1:-1",
             "valueType":
             {
               "id": 24,
@@ -314,6 +330,10 @@
               {
                 "id": 23,
                 "name": "MyUInt",
+                "nameLocations":
+                [
+                  "190:6:1"
+                ],
                 "nodeType": "IdentifierPath",
                 "referencedDeclaration": 20,
                 "src": "190:6:1"

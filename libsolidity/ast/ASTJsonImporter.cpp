@@ -95,11 +95,39 @@ SourceLocation const ASTJsonImporter::createSourceLocation(Json::Value const& _n
 	return solidity::langutil::parseSourceLocation(_node["src"].asString(), m_sourceNames);
 }
 
+optional<vector<SourceLocation>> ASTJsonImporter::createSourceLocations(Json::Value const& _node) const
+{
+	vector<SourceLocation> locations;
+
+	if (_node.isMember("nameLocations") && _node["nameLocations"].isArray())
+	{
+		for (auto const& val: _node["nameLocations"])
+			locations.emplace_back(langutil::parseSourceLocation(val.asString(), m_sourceNames));
+		return locations;
+	}
+
+	return nullopt;
+}
+
 SourceLocation ASTJsonImporter::createNameSourceLocation(Json::Value const& _node)
 {
 	astAssert(member(_node, "nameLocation").isString(), "'nameLocation' must be a string");
 
 	return solidity::langutil::parseSourceLocation(_node["nameLocation"].asString(), m_sourceNames);
+}
+
+SourceLocation ASTJsonImporter::createKeyNameSourceLocation(Json::Value const& _node)
+{
+	astAssert(member(_node, "keyNameLocation").isString(), "'keyNameLocation' must be a string");
+
+	return solidity::langutil::parseSourceLocation(_node["keyNameLocation"].asString(), m_sourceNames);
+}
+
+SourceLocation ASTJsonImporter::createValueNameSourceLocation(Json::Value const& _node)
+{
+	astAssert(member(_node, "valueNameLocation").isString(), "'valueNameLocation' must be a string");
+
+	return solidity::langutil::parseSourceLocation(_node["valueNameLocation"].asString(), m_sourceNames);
 }
 
 template<class T>
@@ -285,7 +313,7 @@ ASTPointer<ImportDirective> ASTJsonImporter::createImportDirective(Json::Value c
 		path,
 		unitAlias,
 		createNameSourceLocation(_node),
-		move(symbolAliases)
+		std::move(symbolAliases)
 	);
 
 	astAssert(_node["absolutePath"].isString(), "Expected 'absolutePath' to be a string!");
@@ -325,6 +353,7 @@ ASTPointer<IdentifierPath> ASTJsonImporter::createIdentifierPath(Json::Value con
 	astAssert(_node["name"].isString(), "Expected 'name' to be a string!");
 
 	vector<ASTString> namePath;
+	vector<SourceLocation> namePathLocations;
 	vector<string> strs;
 	string nameString = member(_node, "name").asString();
 	boost::algorithm::split(strs, nameString, boost::is_any_of("."));
@@ -334,7 +363,23 @@ ASTPointer<IdentifierPath> ASTJsonImporter::createIdentifierPath(Json::Value con
 		astAssert(!s.empty(), "Expected non-empty string for IdentifierPath element.");
 		namePath.emplace_back(s);
 	}
-	return createASTNode<IdentifierPath>(_node, namePath);
+
+	if (_node.isMember("nameLocations") && _node["nameLocations"].isArray())
+		for (auto const& val: _node["nameLocations"])
+			namePathLocations.emplace_back(langutil::parseSourceLocation(val.asString(), m_sourceNames));
+	else
+		namePathLocations.resize(namePath.size());
+
+	astAssert(
+		namePath.size() == namePathLocations.size(),
+		"SourceLocations don't match name paths."
+	);
+
+	return createASTNode<IdentifierPath>(
+		_node,
+		namePath,
+		namePathLocations
+	);
 }
 
 ASTPointer<InheritanceSpecifier> ASTJsonImporter::createInheritanceSpecifier(Json::Value const& _node)
@@ -360,7 +405,7 @@ ASTPointer<UsingForDirective> ASTJsonImporter::createUsingForDirective(Json::Val
 
 	return createASTNode<UsingForDirective>(
 		_node,
-		move(functions),
+		std::move(functions),
 		!_node.isMember("libraryName"),
 		_node["typeName"].isNull() ? nullptr  : convertJsonToASTNode<TypeName>(_node["typeName"]),
 		memberAsBool(_node, "global")
@@ -617,7 +662,11 @@ ASTPointer<Mapping> ASTJsonImporter::createMapping(Json::Value const&  _node)
 	return createASTNode<Mapping>(
 		_node,
 		convertJsonToASTNode<TypeName>(member(_node, "keyType")),
-		convertJsonToASTNode<TypeName>(member(_node, "valueType"))
+		memberAsASTString(_node, "keyName"),
+		createKeyNameSourceLocation(_node),
+		convertJsonToASTNode<TypeName>(member(_node, "valueType")),
+		memberAsASTString(_node, "valueName"),
+		createValueNameSourceLocation(_node)
 	);
 }
 
@@ -655,7 +704,7 @@ ASTPointer<InlineAssembly> ASTJsonImporter::createInlineAssembly(Json::Value con
 		_node,
 		nullOrASTString(_node, "documentation"),
 		dialect,
-		move(flags),
+		std::move(flags),
 		operations
 	);
 }
@@ -876,11 +925,17 @@ ASTPointer<FunctionCall> ASTJsonImporter::createFunctionCall(Json::Value const& 
 		astAssert(name.isString(), "Expected 'names' members to be strings!");
 		names.push_back(make_shared<ASTString>(name.asString()));
 	}
+
+	optional<vector<SourceLocation>> sourceLocations = createSourceLocations(_node);
+
 	return createASTNode<FunctionCall>(
 		_node,
 		convertJsonToASTNode<Expression>(member(_node, "expression")),
 		arguments,
-		names
+		names,
+		sourceLocations ?
+			*sourceLocations :
+			vector<SourceLocation>(names.size())
 	);
 }
 
@@ -914,10 +969,15 @@ ASTPointer<NewExpression> ASTJsonImporter::createNewExpression(Json::Value const
 
 ASTPointer<MemberAccess> ASTJsonImporter::createMemberAccess(Json::Value const&  _node)
 {
+	SourceLocation memberLocation;
+	if (member(_node, "memberLocation").isString())
+		memberLocation = solidity::langutil::parseSourceLocation(_node["memberLocation"].asString(), m_sourceNames);
+
 	return createASTNode<MemberAccess>(
 		_node,
 		convertJsonToASTNode<Expression>(member(_node, "expression")),
-		memberAsASTString(_node, "memberName")
+		memberAsASTString(_node, "memberName"),
+		std::move(memberLocation)
 	);
 }
 

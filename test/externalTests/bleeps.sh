@@ -28,7 +28,7 @@ REPO_ROOT=$(realpath "$(dirname "$0")/../..")
 
 verify_input "$@"
 BINARY_TYPE="$1"
-BINARY_PATH="$2"
+BINARY_PATH="$(realpath "$2")"
 SELECTED_PRESETS="$3"
 
 function compile_fn { npm run compile; }
@@ -85,6 +85,10 @@ function bleeps_test
     force_hardhat_compiler_settings "$config_file" "$(first_word "$SELECTED_PRESETS")" "$config_var"
     npm install npm-run-all
     npm install
+
+    # Causes a test failure with hardhat 2.11.0 (latest at the moment of writing this)
+    # TODO: Remove when https://github.com/wighawag/bleeps/issues/4 is resolved
+    npm install hardhat@2.10.2
 
     # TODO: Bleeps depends on OpenZeppelin 4.3.2, which is affected by
     # https://github.com/OpenZeppelin/openzeppelin-contracts/pull/3293.

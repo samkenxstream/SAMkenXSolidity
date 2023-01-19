@@ -1,12 +1,80 @@
-### 0.8.16 (unreleased)
+### 0.8.18 (unreleased)
 
 Language Features:
+* Allow named parameters in mapping types.
 
 
 Compiler Features:
+ * Commandline Interface: Return exit code ``2`` on uncaught exceptions.
+ * Commandline Interface: Add `--no-cbor-metadata` that skips CBOR metadata from getting appended at the end of the bytecode.
+ * EVM: Basic support for the EVM version "Paris".
+ * Natspec: Add event Natspec inheritance for devdoc.
+ * Standard JSON: Add a boolean field `settings.metadata.appendCBOR` that skips CBOR metadata from getting appended at the end of the bytecode.
+ * Yul EVM Code Transform: Generate more optimal code for user-defined functions that always terminate a transaction. No return labels will be pushed for calls to functions that always terminate.
+ * Yul Optimizer: Allow replacing the previously hard-coded cleanup sequence by specifying custom steps after a colon delimiter (``:``) in the sequence string.
+ * Yul Optimizer: Eliminate ``keccak256`` calls if the value was already calculated by a previous call and can be reused.
+ * Language Server: Add basic document hover support.
+ * Optimizer: Added optimization rule ``and(shl(X, Y), shl(X, Z)) => shl(X, and(Y, Z))``.
+ * SMTChecker: Support Eldarica as a Horn solver for the CHC engine when using the CLI option ``--model-checker-solvers eld``. The binary `eld` must be available in the system.
+ * SMTChecker: Make ``z3`` the default solver for the BMC and CHC engines instead of all solvers.
+ * Parser: More detailed error messages about invalid version pragmas.
+ * Removed support for the ``solidity-upgrade`` tool.
 
 
 Bugfixes:
+ * Yul Optimizer: Hash hex and decimal literals according to their value instead of their representation, improving the detection of equivalent functions.
+ * Solidity Upgrade Tool ``solidity-upgrade``: Fix the tool returning success code on uncaught exceptions.
+ * SMTChecker: Fix display error for negative integers that are one more than powers of two.
+ * SMTChecker: Improved readability for large integers that are powers of two or almost powers of two in error messages.
+ * SMTChecker: Fix internal error when a public library function is called internally.
+ * SMTChecker: Fix internal error on multiple wrong SMTChecker natspec entries.
+ * SMTChecker: Fix internal error on chain assignments using static fully specified state variables.
+ * SMTChecker: Fix internal error when using user defined types as mapping indices or struct members.
+ * SMTChecker: Fix internal error when deleting struct member of function type.
+ * TypeChecker: Fix bug where private library functions could be attached with ``using for`` outside of their declaration scope.
+
+
+### 0.8.17 (2022-09-08)
+
+Important Bugfixes:
+ * Yul Optimizer: Prevent the incorrect removal of storage writes before calls to Yul functions that conditionally terminate the external EVM call.
+
+
+Compiler Features:
+ * Code Generator: More efficient overflow checks for multiplication.
+ * Language Server: Analyze all files in a project by default (can be customized by setting ``'file-load-strategy'`` to ``'directly-opened-and-on-import'`` in LSP settings object).
+ * Yul Optimizer: Simplify the starting offset of zero-length operations to zero.
+
+
+Bugfixes:
+ * Type Checker: Fix internal compiler error on tuple assignments with invalid left-hand side.
+ * Yul IR Code Generation: Fix internal compiler error when accessing the ``.slot`` member of a mapping through a storage reference in inline assembly.
+
+
+Build System:
+ * Allow disabling pedantic warnings and do not treat warnings as errors during compiler build when ``-DPEDANTIC=OFF`` flag is passed to CMake.
+ * Update emscripten to version 3.1.19.
+
+
+### 0.8.16 (2022-08-08)
+
+Important Bugfixes:
+ * Code Generation: Fix data corruption that affected ABI-encoding of calldata values represented by tuples: structs at any nesting level; argument lists of external functions, events and errors; return value lists of external functions. The 32 leading bytes of the first dynamically-encoded value in the tuple would get zeroed when the last component contained a statically-encoded array.
+
+
+Compiler Features:
+ * Code Generator: More efficient code for checked addition and subtraction.
+ * TypeChecker: Support using library constants in initializers of other constants.
+ * Yul IR Code Generation: Improved copy routines for arrays with packed storage layout.
+ * Yul Optimizer: Add rule to convert ``mod(add(X, Y), A)`` into ``addmod(X, Y, A)``, if ``A`` is a power of two.
+ * Yul Optimizer: Add rule to convert ``mod(mul(X, Y), A)`` into ``mulmod(X, Y, A)``, if ``A`` is a power of two.
+
+
+Bugfixes:
+ * Commandline Interface: Disallow the following options outside of the compiler mode: ``--via-ir``,``--metadata-literal``, ``--metadata-hash``, ``--model-checker-show-unproved``, ``--model-checker-div-mod-no-slacks``, ``--model-checker-engine``, ``--model-checker-invariants``, ``--model-checker-solvers``, ``--model-checker-timeout``, ``--model-checker-contracts``, ``--model-checker-targets``.
+ * Type Checker: Fix compiler crash on tuple assignments involving certain patterns with unary tuples on the left-hand side.
+ * Type Checker: Fix compiler crash when ``abi.encodeCall`` received a tuple expression instead of an inline tuple.
+ * Type Checker: Fix null dereference in ``abi.encodeCall`` type checking of free function.
 
 
 ### 0.8.15 (2022-06-15)
@@ -21,14 +89,17 @@ Language Features:
 
 
 Compiler Features:
- * LSP: Add rudimentary support for semantic highlighting.
+ * Language Server: Add rudimentary support for semantic highlighting.
+ * Language Server: Adds support for configuring ``include-paths`` JSON settings object that can be passed during LSP configuration stage.
+ * Language Server: Always add ``{project_root}/node_modules`` to include search paths.
  * Type Checker: Warn about assignments involving multiple pushes to storage ``bytes`` that may invalidate references.
  * Yul Optimizer: Improve inlining heuristics for via IR code generation and pure Yul compilation.
-
 
 Bugfixes:
  * ABI Encoder: When encoding an empty string coming from storage do not add a superfluous empty slot for data.
  * Common Subexpression Eliminator: Process assembly items in chunks with maximum size of 2000. It helps to avoid extremely time-consuming searches during code optimization.
+ * DocString Parser: Fix ICE caused by an immutable struct with mapping.
+ * Yul IR Code Generation: More robust cleanup in corner cases during memory to storage copies.
  * Yul Optimizer: Do not remove ``returndatacopy`` in cases in which it might perform out-of-bounds reads that unconditionally revert as out-of-gas. Previously, any ``returndatacopy`` that wrote to memory that was never read from was removed without accounting for the out-of-bounds condition.
 
 
@@ -71,9 +142,10 @@ Compiler Features:
  * Commandline Interface: Allow the use of ``--via-ir`` in place of ``--experimental-via-ir``.
  * Compilation via Yul IR is no longer marked as experimental.
  * JSON-AST: Added selector field for errors and events.
- * LSP: Implements goto-definition.
+ * Language Server: Implements goto-definition.
  * Peephole Optimizer: Optimize comparisons in front of conditional jumps and conditional jumps across a single unconditional jump.
  * Yul EVM Code Transform: Avoid unnecessary ``pop``s on terminating control flow.
+ * Yul IR Code Generation: When the result of an external call is statically-sized, ignore any returndata past the size expected by the compiler.
  * Yul Optimizer: Remove ``sstore`` and ``mstore`` operations that are never read from.
 
 

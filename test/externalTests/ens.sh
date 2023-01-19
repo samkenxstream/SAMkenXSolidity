@@ -28,7 +28,7 @@ REPO_ROOT=$(realpath "$(dirname "$0")/../..")
 
 verify_input "$@"
 BINARY_TYPE="$1"
-BINARY_PATH="$2"
+BINARY_PATH="$(realpath "$2")"
 SELECTED_PRESETS="$3"
 
 function compile_fn { yarn build; }
@@ -37,8 +37,8 @@ function test_fn { yarn test; }
 function ens_test
 {
     local repo="https://github.com/ensdomains/ens-contracts.git"
-    local ref_type=branch
-    local ref="master"
+    local ref_type=commit
+    local ref="083d29a2c50cd0a8307386abf8fadc217b256256"
     local config_file="hardhat.config.js"
 
     local compile_only_presets=(
@@ -69,9 +69,8 @@ function ens_test
     neutralize_packaged_contracts
 
     # In some cases Hardhat does not detect revert reasons properly via IR.
-    # TODO: Remove this when https://github.com/NomicFoundation/hardhat/issues/2115 gets fixed.
+    # TODO: Remove this when https://github.com/NomicFoundation/hardhat/issues/3365 gets fixed.
     sed -i "s|it\(('Does not allow wrapping a name you do not own',\)|it.skip\1|g" test/wrapper/NameWrapper.js
-    # TODO: Remove this when https://github.com/NomicFoundation/hardhat/issues/2453 gets fixed.
     sed -i "s|it\(('can set fuses and then burn ability to burn fuses',\)|it.skip\1|g" test/wrapper/NameWrapper.js
     sed -i "s|it\(('can set fuses and burn canSetResolver and canSetTTL',\)|it.skip\1|g" test/wrapper/NameWrapper.js
     sed -i "s|it\(('Cannot be called if CANNOT_TRANSFER is burned\.',\)|it.skip\1|g" test/wrapper/NameWrapper.js

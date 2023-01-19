@@ -85,6 +85,39 @@ BOOST_AUTO_TEST_CASE(conditional_with_else)
 	BOOST_CHECK_EQUAL(Whiskers(templ)("b", false).render(), "Y");
 }
 
+BOOST_AUTO_TEST_CASE(broken_conditional_with_else)
+{
+	string templ = "<?b>X<!bY</b>";
+	BOOST_CHECK_THROW(Whiskers{templ}, WhiskersError);
+
+	templ = "<?bX<!b>Y</b>";
+	BOOST_CHECK_THROW(Whiskers{templ}, WhiskersError);
+
+	templ = "<?b>X<!b>Y</b";
+	BOOST_CHECK_THROW(Whiskers{templ}, WhiskersError);
+}
+
+BOOST_AUTO_TEST_CASE(broken_conditional_value_with_else)
+{
+	string templ = "<?+b>X<!+bY</+b>";
+	BOOST_CHECK_THROW(Whiskers{templ}, WhiskersError);
+
+	templ = "<?+bX<!+b>Y</+b>";
+	BOOST_CHECK_THROW(Whiskers{templ}, WhiskersError);
+
+	templ = "<?+b>X<!+b>Y</+b";
+	BOOST_CHECK_THROW(Whiskers{templ}, WhiskersError);
+}
+
+BOOST_AUTO_TEST_CASE(broken_list_parameter)
+{
+	string templ = "<#b><a></b";
+	BOOST_CHECK_THROW(Whiskers{templ}, WhiskersError);
+
+	templ = "<#b<a></b>";
+	BOOST_CHECK_THROW(Whiskers{templ}, WhiskersError);
+}
+
 BOOST_AUTO_TEST_CASE(conditional_plus_params)
 {
 	string templ = " - <?b>_<r><!b>^<t></b> - ";

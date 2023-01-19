@@ -29,6 +29,10 @@ using namespace solidity::frontend::test;
 
 SMTCheckerTest::SMTCheckerTest(string const& _filename): SyntaxTest(_filename, EVMVersion{})
 {
+	auto contract = m_reader.stringSetting("SMTContract", "");
+	if (!contract.empty())
+		m_modelCheckerSettings.contracts.contracts[""] = {contract};
+
 	auto const& showUnproved = m_reader.stringSetting("SMTShowUnproved", "yes");
 	if (showUnproved == "no")
 		m_modelCheckerSettings.showUnproved = false;
@@ -38,10 +42,8 @@ SMTCheckerTest::SMTCheckerTest(string const& _filename): SyntaxTest(_filename, E
 		BOOST_THROW_EXCEPTION(runtime_error("Invalid SMT \"show unproved\" choice."));
 
 	m_modelCheckerSettings.solvers = smtutil::SMTSolverChoice::None();
-	auto const& choice = m_reader.stringSetting("SMTSolvers", "any");
-	if (choice == "any")
-		m_modelCheckerSettings.solvers = smtutil::SMTSolverChoice::All();
-	else if (choice == "none")
+	auto const& choice = m_reader.stringSetting("SMTSolvers", "z3");
+	if (choice == "none")
 		m_modelCheckerSettings.solvers = smtutil::SMTSolverChoice::None();
 	else if (!m_modelCheckerSettings.solvers.setSolver(choice))
 		BOOST_THROW_EXCEPTION(runtime_error("Invalid SMT solver choice."));
@@ -61,7 +63,7 @@ SMTCheckerTest::SMTCheckerTest(string const& _filename): SyntaxTest(_filename, E
 	if (m_modelCheckerSettings.solvers.none() || m_modelCheckerSettings.engine.none())
 		m_shouldRun = false;
 
-	auto const& ignoreCex = m_reader.stringSetting("SMTIgnoreCex", "no");
+	auto const& ignoreCex = m_reader.stringSetting("SMTIgnoreCex", "yes");
 	if (ignoreCex == "no")
 		m_ignoreCex = false;
 	else if (ignoreCex == "yes")
@@ -77,7 +79,7 @@ SMTCheckerTest::SMTCheckerTest(string const& _filename): SyntaxTest(_filename, E
 		return filtered;
 	};
 	if (m_modelCheckerSettings.invariants.invariants.empty())
-		m_expectations = removeInv(move(m_expectations));
+		m_expectations = removeInv(std::move(m_expectations));
 
 	auto const& ignoreInv = m_reader.stringSetting("SMTIgnoreInv", "yes");
 	if (ignoreInv == "no")
@@ -127,5 +129,8 @@ void SMTCheckerTest::filterObtainedErrors()
 	};
 
 	if (m_ignoreCex)
+	{
+		removeCex(m_expectations);
 		removeCex(m_errorList);
+	}
 }

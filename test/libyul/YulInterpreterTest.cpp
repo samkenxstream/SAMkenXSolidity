@@ -51,6 +51,7 @@ YulInterpreterTest::YulInterpreterTest(string const& _filename):
 {
 	m_source = m_reader.source();
 	m_expectation = m_reader.simpleExpectations();
+	m_simulateExternalCallsToSelf = m_reader.boolSetting("simulateExternalCall", false);
 }
 
 TestCase::TestResult YulInterpreterTest::run(ostream& _stream, string const& _linePrefix, bool const _formatted)
@@ -67,6 +68,7 @@ bool YulInterpreterTest::parse(ostream& _stream, string const& _linePrefix, bool
 {
 	YulStack stack(
 		solidity::test::CommonOptions::get().evmVersion(),
+		solidity::test::CommonOptions::get().eofVersion(),
 		YulStack::Language::StrictAssembly,
 		solidity::frontend::OptimiserSettings::none(),
 		DebugInfoSelection::All()
@@ -98,7 +100,8 @@ string YulInterpreterTest::interpret()
 			state,
 			EVMDialect::strictAssemblyForEVMObjects(langutil::EVMVersion{}),
 			*m_ast,
-			/*disableMemoryTracing=*/false
+			/*disableExternalCalls=*/ !m_simulateExternalCallsToSelf,
+			/*disableMemoryTracing=*/ false
 		);
 	}
 	catch (InterpreterTerminatedGeneric const&)

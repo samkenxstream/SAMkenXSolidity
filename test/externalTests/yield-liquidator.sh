@@ -28,7 +28,7 @@ REPO_ROOT=$(realpath "$(dirname "$0")/../..")
 
 verify_input "$@"
 BINARY_TYPE="$1"
-BINARY_PATH="$2"
+BINARY_PATH="$(realpath "$2")"
 SELECTED_PRESETS="$3"
 
 function compile_fn { npm run build; }
@@ -65,6 +65,10 @@ function yield_liquidator_test
     force_hardhat_compiler_settings "$config_file" "$(first_word "$SELECTED_PRESETS")" "$config_var"
     force_hardhat_unlimited_contract_size "$config_file" "$config_var"
     npm install
+
+    # 2.11.0 Hardhat release breaks contract compilation.
+    # TODO: remove when https://github.com/yieldprotocol/yield-liquidator-v2/issues/34 is addressed.
+    npm install hardhat@2.10.2
 
     replace_version_pragmas
     neutralize_packaged_contracts

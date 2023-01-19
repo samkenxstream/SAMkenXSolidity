@@ -105,10 +105,13 @@ void UnusedStoreEliminator::operator()(FunctionCall const& _functionCall)
 	else
 		sideEffects = m_controlFlowSideEffects.at(_functionCall.functionName.name);
 
+	if (sideEffects.canTerminate)
+		changeUndecidedTo(State::Used, Location::Storage);
 	if (!sideEffects.canContinue)
 	{
 		changeUndecidedTo(State::Unused, Location::Memory);
-		changeUndecidedTo(sideEffects.canTerminate ? State::Used : State::Unused, Location::Storage);
+		if (!sideEffects.canTerminate)
+			changeUndecidedTo(State::Unused, Location::Storage);
 	}
 }
 
@@ -186,7 +189,7 @@ void UnusedStoreEliminator::visit(Statement const& _statement)
 		m_stores[YulString{}].insert({&_statement, initialState});
 		vector<Operation> operations = operationsFromFunctionCall(*funCall);
 		yulAssert(operations.size() == 1, "");
-		m_storeOperations[&_statement] = move(operations.front());
+		m_storeOperations[&_statement] = std::move(operations.front());
 	}
 }
 

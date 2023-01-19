@@ -173,10 +173,9 @@ private:
 		{
 			solAssert(suffix == "slot" || suffix == "offset");
 			solAssert(varDecl->isLocalVariable());
+			solAssert(!varDecl->type()->isValueType());
 			if (suffix == "slot")
 				value = IRVariable{*varDecl}.part("slot").name();
-			else if (varDecl->type()->isValueType())
-				value = IRVariable{*varDecl}.part("offset").name();
 			else
 			{
 				solAssert(!IRVariable{*varDecl}.hasPart("offset"));
@@ -827,17 +826,17 @@ bool IRGeneratorForStatements::visit(BinaryOperation const& _binOp)
 				expr = "iszero(" + expr + ")";
 		}
 		else if (op == Token::Equal)
-			expr = "eq(" + move(args) + ")";
+			expr = "eq(" + std::move(args) + ")";
 		else if (op == Token::NotEqual)
-			expr = "iszero(eq(" + move(args) + "))";
+			expr = "iszero(eq(" + std::move(args) + "))";
 		else if (op == Token::GreaterThanOrEqual)
-			expr = "iszero(" + string(isSigned ? "slt(" : "lt(") + move(args) + "))";
+			expr = "iszero(" + string(isSigned ? "slt(" : "lt(") + std::move(args) + "))";
 		else if (op == Token::LessThanOrEqual)
-			expr = "iszero(" + string(isSigned ? "sgt(" : "gt(") + move(args) + "))";
+			expr = "iszero(" + string(isSigned ? "sgt(" : "gt(") + std::move(args) + "))";
 		else if (op == Token::GreaterThan)
-			expr = (isSigned ? "sgt(" : "gt(") + move(args) + ")";
+			expr = (isSigned ? "sgt(" : "gt(") + std::move(args) + ")";
 		else if (op == Token::LessThan)
-			expr = (isSigned ? "slt(" : "lt(") + move(args) + ")";
+			expr = (isSigned ? "slt(" : "lt(") + std::move(args) + ")";
 		else
 			solAssert(false, "Unknown comparison operator.");
 		define(_binOp) << expr << "\n";
@@ -954,7 +953,7 @@ void IRGeneratorForStatements::endVisit(FunctionCall const& _functionCall)
 		solAssert(!functionType->takesArbitraryParameters());
 
 		vector<string> args;
-		if (functionType->bound())
+		if (functionType->hasBoundFirstArgument())
 			args += IRVariable(_functionCall.expression()).part("self").stackSlots();
 
 		for (size_t i = 0; i < arguments.size(); ++i)
@@ -1025,7 +1024,7 @@ void IRGeneratorForStatements::endVisit(FunctionCall const& _functionCall)
 					solAssert(
 						IRVariable(arg).type() == *functionType &&
 						functionType->kind() == FunctionType::Kind::External &&
-						!functionType->bound(),
+						!functionType->hasBoundFirstArgument(),
 						""
 					);
 					define(indexedArgs.emplace_back(m_context.newYulVariable(), *TypeProvider::fixedBytes(32))) <<
@@ -1109,7 +1108,7 @@ void IRGeneratorForStatements::endVisit(FunctionCall const& _functionCall)
 			messageArgumentType
 		);
 
-		appendCode() << move(requireOrAssertFunction) << "(" << IRVariable(*arguments[0]).name();
+		appendCode() << std::move(requireOrAssertFunction) << "(" << IRVariable(*arguments[0]).name();
 		if (messageArgumentType && messageArgumentType->sizeOnStack() > 0)
 			appendCode() << ", " << IRVariable(*arguments[1]).commaSeparatedList();
 		appendCode() << ")\n";
@@ -1197,7 +1196,7 @@ void IRGeneratorForStatements::endVisit(FunctionCall const& _functionCall)
 			// hash the signature
 			Type const& selectorType = type(*arguments.front());
 			if (auto const* stringType = dynamic_cast<StringLiteralType const*>(&selectorType))
-				selector = formatNumber(util::selectorFromSignature(stringType->value()));
+				selector = formatNumber(util::selectorFromSignatureU256(stringType->value()));
 			else
 			{
 				// Used to reset the free memory pointer later.
@@ -1354,7 +1353,7 @@ void IRGeneratorForStatements::endVisit(FunctionCall const& _functionCall)
 	}
 	case FunctionType::Kind::ArrayPop:
 	{
-		solAssert(functionType->bound());
+		solAssert(functionType->hasBoundFirstArgument());
 		solAssert(functionType->parameterTypes().empty());
 		ArrayType const* arrayType = dynamic_cast<ArrayType const*>(functionType->selfType());
 		solAssert(arrayType);
@@ -1558,7 +1557,7 @@ void IRGeneratorForStatements::endVisit(FunctionCall const& _functionCall)
 		solAssert(!_functionCall.annotation().tryCall);
 		solAssert(!functionType->valueSet());
 		solAssert(!functionType->gasSet());
-		solAssert(!functionType->bound());
+		solAssert(!functionType->hasBoundFirstArgument());
 
 		static map<FunctionType::Kind, std::tuple<unsigned, size_t>> precompiles = {
 			{FunctionType::Kind::ECRecover, std::make_tuple(1, 0)},
@@ -1624,7 +1623,7 @@ void IRGeneratorForStatements::endVisit(FunctionCallOptions const& _options)
 	setLocation(_options);
 	FunctionType const& previousType = dynamic_cast<FunctionType const&>(*_options.expression().annotation().type);
 
-	solUnimplementedAssert(!previousType.bound());
+	solUnimplementedAssert(!previousType.hasBoundFirstArgument());
 
 	// Copy over existing values.
 	for (auto const& item: previousType.stackItems())
@@ -1669,7 +1668,7 @@ void IRGeneratorForStatements::endVisit(MemberAccess const& _memberAccess)
 	auto memberFunctionType = dynamic_cast<FunctionType const*>(_memberAccess.annotation().type);
 	Type::Category objectCategory = _memberAccess.expression().annotation().type->category();
 
-	if (memberFunctionType && memberFunctionType->bound())
+	if (memberFunctionType && memberFunctionType->hasBoundFirstArgument())
 	{
 		define(IRVariable(_memberAccess).part("self"), _memberAccess.expression());
 		solAssert(*_memberAccess.annotation().requiredLookup == VirtualLookup::Static);
@@ -1786,7 +1785,7 @@ void IRGeneratorForStatements::endVisit(MemberAccess const& _memberAccess)
 					""
 				);
 				define(IRVariable{_memberAccess}) << formatNumber(
-					util::selectorFromSignature(functionType.externalSignature())
+					util::selectorFromSignatureU256(functionType.externalSignature())
 				) << "\n";
 			}
 			else if (functionType.kind() == FunctionType::Kind::Event)
@@ -2507,7 +2506,7 @@ void IRGeneratorForStatements::appendExternalFunctionCall(
 	TypePointers parameterTypes = funType.parameterTypes();
 	TypePointers argumentTypes;
 	vector<string> argumentStrings;
-	if (funType.bound())
+	if (funType.hasBoundFirstArgument())
 	{
 		parameterTypes.insert(parameterTypes.begin(), funType.selfType());
 		argumentTypes.emplace_back(funType.selfType());
@@ -2656,7 +2655,7 @@ void IRGeneratorForStatements::appendBareCall(
 {
 	FunctionType const& funType = dynamic_cast<FunctionType const&>(type(_functionCall.expression()));
 	solAssert(
-		!funType.bound() &&
+		!funType.hasBoundFirstArgument() &&
 		!funType.takesArbitraryParameters() &&
 		_arguments.size() == 1 &&
 		funType.parameterTypes().size() == 1, ""
@@ -3235,7 +3234,7 @@ void IRGeneratorForStatements::handleCatch(TryStatement const& _tryStatement)
 
 	if (TryCatchClause const* errorClause = _tryStatement.errorClause())
 	{
-		appendCode() << "case " << selectorFromSignature32("Error(string)") << " {\n";
+		appendCode() << "case " << selectorFromSignatureU32("Error(string)") << " {\n";
 		setLocation(*errorClause);
 		string const dataVariable = m_context.newYulVariable();
 		appendCode() << "let " << dataVariable << " := " << m_utils.tryDecodeErrorMessageFunction() << "()\n";
@@ -3255,7 +3254,7 @@ void IRGeneratorForStatements::handleCatch(TryStatement const& _tryStatement)
 	}
 	if (TryCatchClause const* panicClause = _tryStatement.panicClause())
 	{
-		appendCode() << "case " << selectorFromSignature32("Panic(uint256)") << " {\n";
+		appendCode() << "case " << selectorFromSignatureU32("Panic(uint256)") << " {\n";
 		setLocation(*panicClause);
 		string const success = m_context.newYulVariable();
 		string const code = m_context.newYulVariable();
@@ -3318,7 +3317,7 @@ void IRGeneratorForStatements::revertWithError(
 	})");
 	templ("pos", m_context.newYulVariable());
 	templ("end", m_context.newYulVariable());
-	templ("hash", util::selectorFromSignature(_signature).str());
+	templ("hash", util::selectorFromSignatureU256(_signature).str());
 	templ("allocateUnbounded", m_utils.allocateUnboundedFunction());
 
 	vector<string> errorArgumentVars;
