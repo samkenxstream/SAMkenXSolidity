@@ -96,6 +96,7 @@ public:
 	bool hasChainID() const { return *this >= istanbul(); }
 	bool hasSelfBalance() const { return *this >= istanbul(); }
 	bool hasBaseFee() const { return *this >= london(); }
+	bool hasPrevRandao() const { return *this >= paris(); }
 
 	bool hasOpcode(evmasm::Instruction _opcode) const;
 
@@ -108,7 +109,7 @@ private:
 
 	EVMVersion(Version _version): m_version(_version) {}
 
-	Version m_version = Version::London;
+	Version m_version = Version::Paris;
 };
 
 }
