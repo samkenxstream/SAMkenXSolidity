@@ -4,9 +4,13 @@ Language Features:
 
 
 Compiler Features:
+ * SMTChecker: New trusted mode that assumes that any compile-time available code is the actual used code even in external calls. This can be used via the CLI option ``--model-checker-ext-calls trusted`` or the JSON field ``settings.modelChecker.extCalls: "trusted"``.
 
 
 Bugfixes:
+ * SMTChecker: Fix internal error when using the custom NatSpec annotation to abstract free functions.
+ * TypeChecker: Also allow external library functions in ``using for``.
+ * SMTChecker: Fix internal error caused by unhandled ``z3`` expressions that come from the solver when bitwise operators are used.
 
 
 ### 0.8.18 (2023-02-01)
