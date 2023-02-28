@@ -1,6 +1,18 @@
-### 0.8.19 (unreleased)
+## 0.8.20 (unreleased)
 
 Language Features:
+
+
+Compiler Features:
+
+
+Bugfixes:
+
+
+### 0.8.19 (2023-02-22)
+
+Language Features:
+* Allow defining custom operators for user-defined value types via ``using {f as +} for T global`` syntax.
 
 
 Compiler Features:
@@ -8,9 +20,16 @@ Compiler Features:
 
 
 Bugfixes:
+ * Assembler: Avoid duplicating subassembly bytecode where possible.
+ * Code Generator: Avoid including references to the deployed label of referenced functions if they are called right away.
+ * ContractLevelChecker: Properly distinguish the case of missing base constructor arguments from having an unimplemented base function.
+ * SMTChecker: Fix internal error caused by unhandled ``z3`` expressions that come from the solver when bitwise operators are used.
  * SMTChecker: Fix internal error when using the custom NatSpec annotation to abstract free functions.
  * TypeChecker: Also allow external library functions in ``using for``.
- * SMTChecker: Fix internal error caused by unhandled ``z3`` expressions that come from the solver when bitwise operators are used.
+
+
+AST Changes:
+ * AST: Add ``function`` field to ``UnaryOperation`` and ``BinaryOperation`` AST nodes. ``functionList`` in ``UsingForDirective`` AST nodes will now contain ``operator`` and ``definition`` members instead of ``function`` when the list entry defines an operator.
 
 
 ### 0.8.18 (2023-02-01)
