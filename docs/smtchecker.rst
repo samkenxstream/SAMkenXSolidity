@@ -483,6 +483,14 @@ All targets are checked by default, except underflow and overflow for Solidity >
 There is no precise heuristic on how and when to split verification targets,
 but it can be useful especially when dealing with large contracts.
 
+Proved Targets
+==============
+
+If there are any proved targets, the SMTChecker issues one warning per engine stating
+how many targets were proved. If the user wishes to see all the specific
+proved targets, the CLI option ``--model-checker-show-proved`` and
+the JSON option ``settings.modelChecker.showProved = true`` can be used.
+
 Unproved Targets
 ================
 
@@ -490,6 +498,23 @@ If there are any unproved targets, the SMTChecker issues one warning stating
 how many unproved targets there are. If the user wishes to see all the specific
 unproved targets, the CLI option ``--model-checker-show-unproved`` and
 the JSON option ``settings.modelChecker.showUnproved = true`` can be used.
+
+Unsupported Language Features
+=============================
+
+Certain Solidity language features are not completely supported by the SMT
+encoding that the SMTChecker applies, for example assembly blocks.
+The unsupported construct is abstracted via overapproximation to preserve
+soundness, meaning any properties reported safe are safe even though this
+feature is unsupported.
+However such abstraction may cause false positives when the target properties
+depend on the precise behavior of the unsupported feature.
+If the encoder encounters such cases it will by default report a generic warning
+stating how many unsupported features it has seen.
+If the user wishes to see all the specific unsupported features, the CLI option
+``--model-checker-show-unsupported`` and the JSON option
+``settings.modelChecker.showUnsupported = true`` can be used, where their default
+value is ``false``.
 
 Verified Contracts
 ==================

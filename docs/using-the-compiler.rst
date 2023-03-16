@@ -439,8 +439,12 @@ Input Description
           "extCalls": "trusted",
           // Choose which types of invariants should be reported to the user: contract, reentrancy.
           "invariants": ["contract", "reentrancy"],
+          // Choose whether to output all proved targets. The default is `false`.
+          "showProved": true,
           // Choose whether to output all unproved targets. The default is `false`.
           "showUnproved": true,
+          // Choose whether to output all unsupported language features. The default is `false`.
+          "showUnsupported": true,
           // Choose which solvers should be used, if available.
           // See the Formal Verification section for the solvers description.
           "solvers": ["cvc4", "smtlib2", "z3"],

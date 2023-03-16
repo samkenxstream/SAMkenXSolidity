@@ -71,7 +71,9 @@ static string const g_strModelCheckerDivModNoSlacks = "model-checker-div-mod-no-
 static string const g_strModelCheckerEngine = "model-checker-engine";
 static string const g_strModelCheckerExtCalls = "model-checker-ext-calls";
 static string const g_strModelCheckerInvariants = "model-checker-invariants";
+static string const g_strModelCheckerShowProvedSafe = "model-checker-show-proved-safe";
 static string const g_strModelCheckerShowUnproved = "model-checker-show-unproved";
+static string const g_strModelCheckerShowUnsupported = "model-checker-show-unsupported";
 static string const g_strModelCheckerSolvers = "model-checker-solvers";
 static string const g_strModelCheckerTargets = "model-checker-targets";
 static string const g_strModelCheckerTimeout = "model-checker-timeout";
@@ -846,8 +848,16 @@ General Information)").c_str(),
 			" By default no invariants are reported."
 		)
 		(
+			g_strModelCheckerShowProvedSafe.c_str(),
+			"Show all targets that were proved safe separately."
+		)
+		(
 			g_strModelCheckerShowUnproved.c_str(),
 			"Show all unproved targets separately."
+		)
+		(
+			g_strModelCheckerShowUnsupported.c_str(),
+			"Show all unsupported language features separately."
 		)
 		(
 			g_strModelCheckerSolvers.c_str(),
@@ -953,7 +963,9 @@ void CommandLineParser::processArgs()
 		{g_strMetadataLiteral, {InputMode::Compiler, InputMode::CompilerWithASTImport}},
 		{g_strNoCBORMetadata, {InputMode::Compiler, InputMode::CompilerWithASTImport}},
 		{g_strMetadataHash, {InputMode::Compiler, InputMode::CompilerWithASTImport}},
+		{g_strModelCheckerShowProvedSafe, {InputMode::Compiler, InputMode::CompilerWithASTImport}},
 		{g_strModelCheckerShowUnproved, {InputMode::Compiler, InputMode::CompilerWithASTImport}},
+		{g_strModelCheckerShowUnsupported, {InputMode::Compiler, InputMode::CompilerWithASTImport}},
 		{g_strModelCheckerDivModNoSlacks, {InputMode::Compiler, InputMode::CompilerWithASTImport}},
 		{g_strModelCheckerEngine, {InputMode::Compiler, InputMode::CompilerWithASTImport}},
 		{g_strModelCheckerInvariants, {InputMode::Compiler, InputMode::CompilerWithASTImport}},
@@ -1314,8 +1326,14 @@ void CommandLineParser::processArgs()
 		m_options.modelChecker.settings.invariants = *invs;
 	}
 
+	if (m_args.count(g_strModelCheckerShowProvedSafe))
+		m_options.modelChecker.settings.showProvedSafe = true;
+
 	if (m_args.count(g_strModelCheckerShowUnproved))
 		m_options.modelChecker.settings.showUnproved = true;
+
+	if (m_args.count(g_strModelCheckerShowUnsupported))
+		m_options.modelChecker.settings.showUnsupported = true;
 
 	if (m_args.count(g_strModelCheckerSolvers))
 	{
@@ -1345,7 +1363,9 @@ void CommandLineParser::processArgs()
 		m_args.count(g_strModelCheckerEngine) ||
 		m_args.count(g_strModelCheckerExtCalls) ||
 		m_args.count(g_strModelCheckerInvariants) ||
+		m_args.count(g_strModelCheckerShowProvedSafe) ||
 		m_args.count(g_strModelCheckerShowUnproved) ||
+		m_args.count(g_strModelCheckerShowUnsupported) ||
 		m_args.count(g_strModelCheckerSolvers) ||
 		m_args.count(g_strModelCheckerTargets) ||
 		m_args.count(g_strModelCheckerTimeout);

@@ -168,7 +168,9 @@ struct ModelCheckerSettings
 	ModelCheckerEngine engine = ModelCheckerEngine::None();
 	ModelCheckerExtCalls externalCalls = {};
 	ModelCheckerInvariants invariants = ModelCheckerInvariants::Default();
+	bool showProvedSafe = false;
 	bool showUnproved = false;
+	bool showUnsupported = false;
 	smtutil::SMTSolverChoice solvers = smtutil::SMTSolverChoice::Z3();
 	ModelCheckerTargets targets = ModelCheckerTargets::Default();
 	std::optional<unsigned> timeout;
@@ -182,7 +184,9 @@ struct ModelCheckerSettings
 			engine == _other.engine &&
 			externalCalls.mode == _other.externalCalls.mode &&
 			invariants == _other.invariants &&
+			showProvedSafe == _other.showProvedSafe &&
 			showUnproved == _other.showUnproved &&
+			showUnsupported == _other.showUnsupported &&
 			solvers == _other.solvers &&
 			targets == _other.targets &&
 			timeout == _other.timeout;

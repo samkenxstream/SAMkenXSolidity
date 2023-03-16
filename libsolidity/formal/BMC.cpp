@@ -39,12 +39,13 @@ using namespace solidity::frontend;
 BMC::BMC(
 	smt::EncodingContext& _context,
 	UniqueErrorReporter& _errorReporter,
+	UniqueErrorReporter& _unsupportedErrorReporter,
 	map<h256, string> const& _smtlib2Responses,
 	ReadCallback::Callback const& _smtCallback,
 	ModelCheckerSettings _settings,
 	CharStreamProvider const& _charStreamProvider
 ):
-	SMTEncoder(_context, _settings, _errorReporter, _charStreamProvider),
+	SMTEncoder(_context, _settings, _errorReporter, _unsupportedErrorReporter, _charStreamProvider),
 	m_interface(make_unique<smtutil::SMTPortfolio>(_smtlib2Responses, _smtCallback, _settings.solvers, _settings.timeout))
 {
 #if defined (HAVE_Z3) || defined (HAVE_CVC4)
@@ -98,6 +99,26 @@ void BMC::analyze(SourceUnit const& _source, map<ASTNode const*, set<Verificatio
 			" Consider choosing a specific contract to be verified in order to reduce the solving problems." +
 			" Consider increasing the timeout per query."
 		);
+
+	if (!m_settings.showProvedSafe && !m_safeTargets.empty())
+		m_errorReporter.info(
+			6002_error,
+			"BMC: " +
+			to_string(m_safeTargets.size()) +
+			" verification condition(s) proved safe!" +
+			" Enable the model checker option \"show proved safe\" to see all of them."
+		);
+	else if (m_settings.showProvedSafe)
+		for (auto const& [node, targets]: m_safeTargets)
+			for (auto const& target: targets)
+				m_errorReporter.info(
+					2961_error,
+					node->location(),
+					"BMC: " +
+					targetDescription(target) +
+					" check is safe!"
+				);
+
 
 	// If this check is true, Z3 and CVC4 are not available
 	// and the query answers were not provided, since SMTPortfolio
@@ -573,7 +594,7 @@ void BMC::internalOrExternalFunctionCall(FunctionCall const& _funCall)
 		// The processing happens in SMT Encoder, but we need to prevent the resetting of the state variables.
 	}
 	else if (funType.kind() == FunctionType::Kind::Internal)
-		m_errorReporter.warning(
+		m_unsupportedErrors.warning(
 			5729_error,
 			_funCall.location(),
 			"BMC does not yet implement this type of function call."
@@ -694,6 +715,30 @@ pair<vector<smtutil::Expression>, vector<string>> BMC::modelExpressions()
 
 /// Verification targets.
 
+string BMC::targetDescription(BMCVerificationTarget const& _target)
+{
+	if (
+		_target.type == VerificationTargetType::Underflow ||
+		_target.type == VerificationTargetType::Overflow
+	)
+	{
+		auto const* intType = dynamic_cast<IntegerType const*>(_target.expression->annotation().type);
+		if (!intType)
+			intType = TypeProvider::uint256();
+
+		if (_target.type == VerificationTargetType::Underflow)
+			return "Underflow (resulting value less than " + formatNumberReadable(intType->minValue()) + ")";
+		return "Overflow (resulting value larger than " + formatNumberReadable(intType->maxValue()) + ")";
+	}
+	else if (_target.type == VerificationTargetType::DivByZero)
+		return "Division by zero";
+	else if (_target.type == VerificationTargetType::Assert)
+		return "Assertion violation";
+	else if (_target.type == VerificationTargetType::Balance)
+		return "Insufficient funds";
+	solAssert(false);
+}
+
 void BMC::checkVerificationTargets()
 {
 	for (auto& target: m_verificationTargets)
@@ -762,13 +807,13 @@ void BMC::checkUnderflow(BMCVerificationTarget& _target)
 		intType = TypeProvider::uint256();
 
 	checkCondition(
+		_target,
 		_target.constraints && _target.value < smt::minValue(*intType),
 		_target.callStack,
 		_target.modelExpressions,
 		_target.expression->location(),
 		4144_error,
 		8312_error,
-		"Underflow (resulting value less than " + formatNumberReadable(intType->minValue()) + ")",
 		"<result>",
 		&_target.value
 	);
@@ -795,13 +840,13 @@ void BMC::checkOverflow(BMCVerificationTarget& _target)
 		intType = TypeProvider::uint256();
 
 	checkCondition(
+		_target,
 		_target.constraints && _target.value > smt::maxValue(*intType),
 		_target.callStack,
 		_target.modelExpressions,
 		_target.expression->location(),
 		2661_error,
 		8065_error,
-		"Overflow (resulting value larger than " + formatNumberReadable(intType->maxValue()) + ")",
 		"<result>",
 		&_target.value
 	);
@@ -818,13 +863,13 @@ void BMC::checkDivByZero(BMCVerificationTarget& _target)
 		return;
 
 	checkCondition(
+		_target,
 		_target.constraints && (_target.value == 0),
 		_target.callStack,
 		_target.modelExpressions,
 		_target.expression->location(),
 		3046_error,
 		5272_error,
-		"Division by zero",
 		"<result>",
 		&_target.value
 	);
@@ -834,13 +879,13 @@ void BMC::checkBalance(BMCVerificationTarget& _target)
 {
 	solAssert(_target.type == VerificationTargetType::Balance, "");
 	checkCondition(
+		_target,
 		_target.constraints && _target.value,
 		_target.callStack,
 		_target.modelExpressions,
 		_target.expression->location(),
 		1236_error,
 		4010_error,
-		"Insufficient funds",
 		"address(this).balance"
 	);
 }
@@ -856,13 +901,13 @@ void BMC::checkAssert(BMCVerificationTarget& _target)
 		return;
 
 	checkCondition(
+		_target,
 		_target.constraints && !_target.value,
 		_target.callStack,
 		_target.modelExpressions,
 		_target.expression->location(),
 		4661_error,
-		7812_error,
-		"Assertion violation"
+		7812_error
 	);
 }
 
@@ -894,13 +939,13 @@ void BMC::addVerificationTarget(
 /// Solving.
 
 void BMC::checkCondition(
+	BMCVerificationTarget const& _target,
 	smtutil::Expression _condition,
 	vector<SMTEncoder::CallStackEntry> const& _callStack,
 	pair<vector<smtutil::Expression>, vector<string>> const& _modelExpressions,
 	SourceLocation const& _location,
 	ErrorId _errorHappens,
 	ErrorId _errorMightHappen,
-	string const& _description,
 	string const& _additionalValueName,
 	smtutil::Expression const* _additionalValue
 )
@@ -942,7 +987,7 @@ void BMC::checkCondition(
 	{
 		solAssert(!_callStack.empty(), "");
 		std::ostringstream message;
-		message << "BMC: " << _description << " happens here.";
+		message << "BMC: " << targetDescription(_target) << " happens here.";
 
 		std::ostringstream modelMessage;
 		// Sometimes models have complex smtlib2 expressions that SMTLib2Interface fails to parse.
@@ -969,12 +1014,15 @@ void BMC::checkCondition(
 		break;
 	}
 	case smtutil::CheckResult::UNSATISFIABLE:
+	{
+		m_safeTargets[_target.expression].insert(_target);
 		break;
+	}
 	case smtutil::CheckResult::UNKNOWN:
 	{
 		++m_unprovedAmt;
 		if (m_settings.showUnproved)
-			m_errorReporter.warning(_errorMightHappen, _location, "BMC: " + _description + " might happen here.", secondaryLocation);
+			m_errorReporter.warning(_errorMightHappen, _location, "BMC: " + targetDescription(_target) + " might happen here.", secondaryLocation);
 		break;
 	}
 	case smtutil::CheckResult::CONFLICTING:
