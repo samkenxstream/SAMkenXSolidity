@@ -294,35 +294,6 @@ Type const* Type::commonType(Type const* _a, Type const* _b)
 		return nullptr;
 }
 
-char const* Type::categoryName(Type::Category _category)
-{
-	switch (_category)
-	{
-	case Category::Address: return "address";
-	case Category::Integer: return "integer";
-	case Category::RationalNumber: return "rational number literal";
-	case Category::StringLiteral: return "string literal";
-	case Category::Bool: return "boolean";
-	case Category::FixedPoint: return "fixed-point number";
-	case Category::Array: return "array";
-	case Category::ArraySlice: return "array slice";
-	case Category::FixedBytes: return "fixed-size byte array";
-	case Category::Contract: return "contract";
-	case Category::Struct: return "struct";
-	case Category::Function: return "function";
-	case Category::Enum: return "enum";
-	case Category::UserDefinedValueType: return "user-defined value type";
-	case Category::Tuple: return "tuple";
-	case Category::Mapping: return "mapping";
-	case Category::TypeType: return "type of a type";
-	case Category::Modifier: return "modifier";
-	case Category::Magic: return "magic variable";
-	case Category::Module: return "module";
-	case Category::InaccessibleDynamic: return "inaccessible dynamic value";
-	}
-	util::unreachable();
-}
-
 MemberList const& Type::members(ASTNode const* _currentScope) const
 {
 	if (!m_members[_currentScope])
@@ -819,16 +790,17 @@ BoolResult FixedPointType::isExplicitlyConvertibleTo(Type const& _convertTo) con
 
 TypeResult FixedPointType::unaryOperatorResult(Token _operator) const
 {
+	solAssert(_operator != Token::Add);
+
 	switch (_operator)
 	{
 	case Token::Delete:
 		// "delete" is ok for all fixed types
 		return TypeResult{TypeProvider::emptyTuple()};
-	case Token::Add:
 	case Token::Sub:
 	case Token::Inc:
 	case Token::Dec:
-		// for fixed, we allow +, -, ++ and --
+		// for fixed, we allow -, ++ and --
 		return this;
 	default:
 		return nullptr;
@@ -1722,7 +1694,7 @@ bool ArrayType::operator==(Type const& _other) const
 		return false;
 	ArrayType const& other = dynamic_cast<ArrayType const&>(_other);
 	if (
-		!ReferenceType::operator==(other) ||
+		!equals(other) ||
 		other.isByteArray() != isByteArray() ||
 		other.isString() != isString() ||
 		other.isDynamicallySized() != isDynamicallySized()
@@ -2232,7 +2204,7 @@ bool StructType::operator==(Type const& _other) const
 	if (_other.category() != category())
 		return false;
 	StructType const& other = dynamic_cast<StructType const&>(_other);
-	return ReferenceType::operator==(other) && other.m_struct == m_struct;
+	return equals(other) && other.m_struct == m_struct;
 }
 
 

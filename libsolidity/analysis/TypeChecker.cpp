@@ -2847,11 +2847,7 @@ bool TypeChecker::visit(FunctionCall const& _functionCall)
 	}
 
 	default:
-		m_errorReporter.fatalTypeError(
-			5704_error,
-			_functionCall.location(),
-			capitalized(Type::categoryName(expressionType->category())) + " is not callable."
-		);
+		m_errorReporter.fatalTypeError(5704_error, _functionCall.location(), "This expression is not callable.");
 		// Unreachable, because fatalTypeError throws. We don't set kind, but that's okay because the switch below
 		// is never reached. And, even if it was, SetOnce would trigger an assertion violation and not UB.
 		funcCallAnno.isPure = argumentsArePure;
@@ -4035,9 +4031,7 @@ void TypeChecker::endVisit(UsingForDirective const& _usingFor)
 
 			bool identicalFirstTwoParameters = (parameterCount < 2 || *parameterTypes.at(0) == *parameterTypes.at(1));
 			bool isUnaryOnlyOperator = (!TokenTraits::isBinaryOp(operator_.value()) && TokenTraits::isUnaryOp(operator_.value()));
-			bool isBinaryOnlyOperator =
-				(TokenTraits::isBinaryOp(operator_.value()) && !TokenTraits::isUnaryOp(operator_.value())) ||
-				operator_.value() == Token::Add;
+			bool isBinaryOnlyOperator = (TokenTraits::isBinaryOp(operator_.value()) && !TokenTraits::isUnaryOp(operator_.value()));
 			bool firstParameterMatchesUsingFor = parameterCount == 0 || *usingForType == *parameterTypes.front();
 
 			optional<string> wrongParametersMessage;

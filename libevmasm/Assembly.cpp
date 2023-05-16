@@ -244,7 +244,7 @@ Json::Value Assembly::assemblyJSON(map<string, unsigned> const& _sourceIndices, 
 		jsonItem["end"] = item.location().end;
 		if (item.m_modifierDepth != 0)
 			jsonItem["modifierDepth"] = static_cast<int>(item.m_modifierDepth);
-		std::string jumpType = item.getJumpTypeAsString();
+		string jumpType = item.getJumpTypeAsString();
 		if (!jumpType.empty())
 			jsonItem["jumpType"] = jumpType;
 		if (name == "PUSHLIB")
@@ -286,7 +286,7 @@ Json::Value Assembly::assemblyJSON(map<string, unsigned> const& _sourceIndices, 
 
 		for (size_t i = 0; i < m_subs.size(); ++i)
 		{
-			std::stringstream hexStr;
+			stringstream hexStr;
 			hexStr << hex << i;
 			data[hexStr.str()] = m_subs[i]->assemblyJSON(_sourceIndices, /*_includeSourceList = */false);
 		}
@@ -341,7 +341,7 @@ Assembly& Assembly::optimise(OptimiserSettings const& _settings)
 
 map<u256, u256> const& Assembly::optimiseInternal(
 	OptimiserSettings const& _settings,
-	std::set<size_t> _tagsReferencedFromOutside
+	set<size_t> _tagsReferencedFromOutside
 )
 {
 	if (m_tagReplacements)
@@ -560,11 +560,18 @@ LinkerObject const& Assembly::assemble() const
 			break;
 		case Push:
 		{
-			unsigned b = max<unsigned>(1, numberEncodingSize(i.data()));
+			unsigned b = numberEncodingSize(i.data());
+			if (b == 0 && !m_evmVersion.hasPush0())
+			{
+				b = 1;
+			}
 			ret.bytecode.push_back(static_cast<uint8_t>(pushInstruction(b)));
-			ret.bytecode.resize(ret.bytecode.size() + b);
-			bytesRef byr(&ret.bytecode.back() + 1 - b, b);
-			toBigEndian(i.data(), byr);
+			if (b > 0)
+			{
+				ret.bytecode.resize(ret.bytecode.size() + b);
+				bytesRef byr(&ret.bytecode.back() + 1 - b, b);
+				toBigEndian(i.data(), byr);
+			}
 			break;
 		}
 		case PushTag:

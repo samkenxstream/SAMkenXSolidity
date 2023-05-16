@@ -27,8 +27,8 @@
 #include <libsolidity/interface/CompilerStack.h>
 #include <libsolidity/interface/DebugSettings.h>
 #include <libsolidity/interface/FileReader.h>
-#include <libsolidity/interface/UniversalCallback.h>
 #include <libsolidity/interface/SMTSolverCommand.h>
+#include <libsolidity/interface/UniversalCallback.h>
 #include <libyul/YulStack.h>
 
 #include <iostream>
@@ -92,7 +92,7 @@ private:
 	/// @returns the full object with library placeholder hints in hex.
 	static std::string objectWithLinkRefsHex(evmasm::LinkerObject const& _obj);
 
-	void assemble(yul::YulStack::Language _language, yul::YulStack::Machine _targetMachine);
+	void assembleYul(yul::YulStack::Language _language, yul::YulStack::Machine _targetMachine);
 
 	void outputCompilationResults();
 
@@ -102,7 +102,6 @@ private:
 	void handleOpcode(std::string const& _contract);
 	void handleIR(std::string const& _contract);
 	void handleIROptimized(std::string const& _contract);
-	void handleEwasm(std::string const& _contract);
 	void handleBytecode(std::string const& _contract);
 	void handleSignatureHashes(std::string const& _contract);
 	void handleMetadata(std::string const& _contract);
