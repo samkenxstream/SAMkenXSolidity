@@ -140,7 +140,7 @@ Exponentiation
 
 Exponentiation is only available for unsigned types in the exponent. The resulting type
 of an exponentiation is always equal to the type of the base. Please take care that it is
-large enough to hold the result and prepare for potential assertion failures or wrapping behaviour.
+large enough to hold the result and prepare for potential assertion failures or wrapping behavior.
 
 .. note::
   In checked mode, exponentiation only uses the comparatively cheap ``exp`` opcode for small bases.
@@ -263,7 +263,7 @@ reverts on failure.
     There are some dangers in using ``send``: The transfer fails if the call stack depth is at 1024
     (this can always be forced by the caller) and it also fails if the recipient runs out of gas. So in order
     to make safe Ether transfers, always check the return value of ``send``, use ``transfer`` or even better:
-    use a pattern where the recipient withdraws the money.
+    use a pattern where the recipient withdraws the Ether.
 
 * ``call``, ``delegatecall`` and ``staticcall``
 

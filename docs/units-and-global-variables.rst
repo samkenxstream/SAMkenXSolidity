@@ -107,7 +107,7 @@ Block and Transaction Properties
 
     Both the timestamp and the block hash can be influenced by miners to some degree.
     Bad actors in the mining community can for example run a casino payout function on a chosen hash
-    and just retry a different hash if they did not receive any money.
+    and just retry a different hash if they did not receive any compensation, e.g. Ether.
 
     The current block timestamp must be strictly larger than the timestamp of the last block,
     but the only guarantee is that it will be somewhere between the timestamps of two
@@ -235,7 +235,7 @@ Mathematical and Cryptographic Functions
     the ecrecover function remained unchanged.
 
     This is usually not a problem unless you require signatures to be unique or use them to identify items.
-    OpenZeppelin have a `ECDSA helper library <https://docs.openzeppelin.com/contracts/4.x/api/utils#ECDSA>`_ that you can use as a wrapper for ``ecrecover`` without this issue.
+    OpenZeppelin has an `ECDSA helper library <https://docs.openzeppelin.com/contracts/4.x/api/utils#ECDSA>`_ that you can use as a wrapper for ``ecrecover`` without this issue.
 
 .. note::
 
@@ -282,7 +282,7 @@ For more information, see the section on :ref:`address`.
     There are some dangers in using ``send``: The transfer fails if the call stack depth is at 1024
     (this can always be forced by the caller) and it also fails if the recipient runs out of gas. So in order
     to make safe Ether transfers, always check the return value of ``send``, use ``transfer`` or even better:
-    Use a pattern where the recipient withdraws the money.
+    Use a pattern where the recipient withdraws the Ether.
 
 .. warning::
     Due to the fact that the EVM considers a call to a non-existing contract to always succeed,
@@ -336,7 +336,7 @@ Furthermore, all functions of the current contract are callable directly includi
 
 .. warning::
     From version 0.8.18 and up, the use of ``selfdestruct`` in both Solidity and Yul will trigger a
-    deprecation warning, since the ``SELFDESTRUCT`` opcode will eventually undergo breaking changes in behaviour
+    deprecation warning, since the ``SELFDESTRUCT`` opcode will eventually undergo breaking changes in behavior
     as stated in `EIP-6049 <https://eips.ethereum.org/EIPS/eip-6049>`_.
 
 .. note::
@@ -380,7 +380,7 @@ The following properties are available for a contract type ``C``:
 In addition to the properties above, the following properties are available
 for an interface type ``I``:
 
-``type(I).interfaceId``:
+``type(I).interfaceId``
     A ``bytes4`` value containing the `EIP-165 <https://eips.ethereum.org/EIPS/eip-165>`_
     interface identifier of the given interface ``I``. This identifier is defined as the ``XOR`` of all
     function selectors defined within the interface itself - excluding all inherited functions.

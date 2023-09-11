@@ -54,7 +54,7 @@ or ../ <direct-imports>` are treated as relative to the directories specified us
 Furthermore, the part of the path added via these options will not appear in the contract metadata.
 
 For security reasons the compiler has :ref:`restrictions on what directories it can access <allowed-paths>`.
-Directories of source files specified on the command line and target paths of
+Directories of source files specified on the command-line and target paths of
 remappings are automatically allowed to be accessed by the file reader, but everything
 else is rejected by default.
 Additional paths (and their subdirectories) can be allowed via the
@@ -114,15 +114,15 @@ Setting the EVM Version to Target
 *********************************
 
 When you compile your contract code you can specify the Ethereum virtual machine
-version to compile for to avoid particular features or behaviours.
+version to compile for to avoid particular features or behaviors.
 
 .. warning::
 
    Compiling for the wrong EVM version can result in wrong, strange and failing
-   behaviour. Please ensure, especially if running a private chain, that you
+   behavior. Please ensure, especially if running a private chain, that you
    use matching EVM versions.
 
-On the command line, you can select the EVM version as follows:
+On the command-line, you can select the EVM version as follows:
 
 .. code-block:: shell
 
@@ -227,7 +227,7 @@ Input Description
             "bzzr://56ab...",
             "ipfs://Qma...",
             "/tmp/path/to/file.sol"
-            // If files are used, their directories should be added to the command line via
+            // If files are used, their directories should be added to the command-line via
             // `--allow-paths <path>`.
           ]
           // If language is set to "SolidityAST", an AST needs to be supplied under the "ast" key.
@@ -272,9 +272,9 @@ Input Description
             // The peephole optimizer is always on if no details are given,
             // use details to switch it off.
             "peephole": true,
-            // The inliner is always on if no details are given,
-            // use details to switch it off.
-            "inliner": true,
+            // The inliner is always off if no details are given,
+            // use details to switch it on.
+            "inliner": false,
             // The unused jumpdest remover is always on if no details are given,
             // use details to switch it off.
             "jumpdestRemover": true,
@@ -304,7 +304,7 @@ Input Description
               // optimization-sequence:clean-up-sequence. For more information see
               // "The Optimizer > Selecting Optimizations".
               // This field is optional, and if not provided, the default sequences for both
-              // optimization and clean-up are used. If only one of the options is provivded
+              // optimization and clean-up are used. If only one of the sequences is provided
               // the other will not be run.
               // If only the delimiter ":" is provided then neither the optimization nor the clean-up
               // sequence will be run.
@@ -316,7 +316,8 @@ Input Description
         },
         // Version of the EVM to compile for.
         // Affects type checking and code generation. Can be homestead,
-        // tangerineWhistle, spuriousDragon, byzantium, constantinople, petersburg, istanbul, berlin, london or paris
+        // tangerineWhistle, spuriousDragon, byzantium, constantinople,
+        // petersburg, istanbul, berlin, london, paris or shanghai (default)
         "evmVersion": "byzantium",
         // Optional: Change compilation pipeline to go through the Yul intermediate representation.
         // This is false by default.
@@ -358,7 +359,7 @@ Input Description
         // Addresses of the libraries. If not all libraries are given here,
         // it can result in unlinked objects whose output data is different.
         "libraries": {
-          // The top level key is the the name of the source file where the library is used.
+          // The top level key is the name of the source file where the library is used.
           // If remappings are used, this source file should match the global path
           // after remappings were applied.
           // If this key is an empty string, that refers to a global level.
@@ -390,7 +391,9 @@ Input Description
         //   userdoc - User documentation (natspec)
         //   metadata - Metadata
         //   ir - Yul intermediate representation of the code before optimization
+        //   irAst - AST of Yul intermediate representation of the code before optimization
         //   irOptimized - Intermediate representation after optimization
+        //   irOptimizedAst - AST of intermediate representation after optimization
         //   storageLayout - Slots, offsets and types of the contract's state variables.
         //   evm.assembly - New assembly format
         //   evm.legacyAssembly - Old-style assembly format in JSON
@@ -405,7 +408,7 @@ Input Description
         //   evm.methodIdentifiers - The list of function hashes
         //   evm.gasEstimates - Function gas estimates
         //
-        // Note that using a using `evm`, `evm.bytecode`, etc. will select every
+        // Note that using `evm`, `evm.bytecode`, etc. will select every
         // target part of that output. Additionally, `*` can be used as a wildcard to request everything.
         //
         "outputSelection": {
@@ -536,8 +539,14 @@ Output Description
             "userdoc": {},
             // Developer documentation (natspec)
             "devdoc": {},
-            // Intermediate representation (string)
+            // Intermediate representation before optimization (string)
             "ir": "",
+            // AST of intermediate representation before optimization
+            "irAst":  {/* ... */},
+            // Intermediate representation after optimization (string)
+            "irOptimized": "",
+            // AST of intermediate representation after optimization
+            "irOptimizedAst": {/* ... */},
             // See the Storage Layout documentation.
             "storageLayout": {"storage": [/* ... */], "types": {/* ... */} },
             // EVM-related outputs

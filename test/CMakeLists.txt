@@ -105,6 +105,8 @@ set(libsolidity_sources
     libsolidity/ViewPureChecker.cpp
     libsolidity/analysis/FunctionCallGraph.cpp
     libsolidity/interface/FileReader.cpp
+    libsolidity/ASTPropertyTest.h
+    libsolidity/ASTPropertyTest.cpp
 )
 detect_stray_source_files("${libsolidity_sources}" "libsolidity/")
 
@@ -112,6 +114,8 @@ set(libsolidity_util_sources
     libsolidity/util/BytesUtils.cpp
     libsolidity/util/BytesUtilsTests.cpp
     libsolidity/util/BytesUtils.h
+    libsolidity/util/Common.cpp
+    libsolidity/util/Common.h
     libsolidity/util/ContractABIUtils.cpp
     libsolidity/util/ContractABIUtils.h
     libsolidity/util/SoltestErrors.h

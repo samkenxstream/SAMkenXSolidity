@@ -77,7 +77,9 @@ struct CompilerOutputs
 			{"bin-runtime", &CompilerOutputs::binaryRuntime},
 			{"abi", &CompilerOutputs::abi},
 			{"ir", &CompilerOutputs::ir},
+			{"ir-ast-json", &CompilerOutputs::irAstJson},
 			{"ir-optimized", &CompilerOutputs::irOptimized},
+			{"ir-optimized-ast-json", &CompilerOutputs::irOptimizedAstJson},
 			{"hashes", &CompilerOutputs::signatureHashes},
 			{"userdoc", &CompilerOutputs::natspecUser},
 			{"devdoc", &CompilerOutputs::natspecDev},
@@ -95,7 +97,9 @@ struct CompilerOutputs
 	bool binaryRuntime = false;
 	bool abi = false;
 	bool ir = false;
+	bool irAstJson = false;
 	bool irOptimized = false;
+	bool irOptimizedAstJson = false;
 	bool signatureHashes = false;
 	bool natspecUser = false;
 	bool natspecDev = false;
@@ -170,7 +174,6 @@ struct CommandLineOptions
 		std::vector<boost::filesystem::path> includePaths;
 		FileReader::FileSystemPathSet allowedDirectories;
 		bool ignoreMissingFiles = false;
-		bool errorRecovery = false;
 	} input;
 
 	struct
@@ -219,9 +222,9 @@ struct CommandLineOptions
 
 	struct
 	{
-		bool enabled = false;
+		bool optimizeEvmasm = false;
+		bool optimizeYul = false;
 		std::optional<unsigned> expectedExecutionsPerDeployment;
-		bool noOptimizeYul = false;
 		std::optional<std::string> yulSteps;
 	} optimizer;
 

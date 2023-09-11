@@ -59,7 +59,7 @@ struct OptimiserSettings
 		"]"
 		"jmul[jul] VcTOcul jmul";      // Make source short and pretty
 
-	static char constexpr DefaultYulOptimiserCleanupSteps[] = "fDnTOc";
+	static char constexpr DefaultYulOptimiserCleanupSteps[] = "fDnTOcmu";
 
 	/// No optimisations at all - not recommended.
 	static OptimiserSettings none()
@@ -103,8 +103,8 @@ struct OptimiserSettings
 			case OptimisationPreset::Minimal: return minimal();
 			case OptimisationPreset::Standard: return standard();
 			case OptimisationPreset::Full: return full();
-			default: solAssert(false, "");
 		}
+		util::unreachable();
 	}
 
 	bool operator==(OptimiserSettings const& _other) const

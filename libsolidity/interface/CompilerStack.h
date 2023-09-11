@@ -86,8 +86,6 @@ class DeclarationContainer;
  * Easy to use and self-contained Solidity compiler with as few header dependencies as possible.
  * It holds state and can be used to either step through the compilation stages (and abort e.g.
  * before compilation to bytecode) or run the whole compilation in one call.
- * If error recovery is active, it is possible to progress through the stages even when
- * there are errors. In any case, producing code is only possible without errors.
  */
 class CompilerStack: public langutil::CharStreamProvider
 {
@@ -101,7 +99,7 @@ public:
 		SourcesSet,
 		Parsed,
 		ParsedAndImported,
-		AnalysisPerformed,
+		AnalysisSuccessful,
 		CompilationSuccessful
 	};
 
@@ -137,10 +135,6 @@ public:
 	/// @returns the current state.
 	State state() const { return m_stackState; }
 
-	bool hasError() const { return m_hasError; }
-
-	bool compilationSuccessful() const { return m_stackState >= CompilationSuccessful; }
-
 	/// Resets the compiler to an empty state. Unless @a _keepSettings is set to true,
 	/// all settings are reset as well.
 	void reset(bool _keepSettings = false);
@@ -163,14 +157,6 @@ public:
 
 	/// Sets whether to strip revert strings, add additional strings or do nothing at all.
 	void setRevertStringBehaviour(RevertStrings _revertStrings);
-
-	/// Set whether or not parser error is desired.
-	/// When called without an argument it will revert to the default.
-	/// Must be set before parsing.
-	void setParserErrorRecovery(bool _wantErrorRecovery = false)
-	{
-		m_parserErrorRecovery = _wantErrorRecovery;
-	}
 
 	/// Sets the pipeline to go through the Yul IR or not.
 	/// Must be set before parsing.
@@ -276,8 +262,14 @@ public:
 	/// @returns the IR representation of a contract.
 	std::string const& yulIR(std::string const& _contractName) const;
 
+	/// @returns the IR representation of a contract AST in format.
+	Json::Value const& yulIRAst(std::string const& _contractName) const;
+
 	/// @returns the optimized IR representation of a contract.
 	std::string const& yulIROptimized(std::string const& _contractName) const;
+
+	/// @returns the optimized IR representation of a contract AST in JSON format.
+	Json::Value const& yulIROptimizedAst(std::string const& _contractName) const;
 
 	/// @returns the assembled object for a contract.
 	evmasm::LinkerObject const& object(std::string const& _contractName) const;
@@ -380,6 +372,8 @@ private:
 		evmasm::LinkerObject runtimeObject; ///< Runtime object.
 		std::string yulIR; ///< Yul IR code.
 		std::string yulIROptimized; ///< Optimized Yul IR code.
+		Json::Value yulIRAst; ///< JSON AST of Yul IR code.
+		Json::Value yulIROptimizedAst; ///< JSON AST of optimized Yul IR code.
 		util::LazyInit<std::string const> metadata; ///< The metadata json that will be hashed into the chain.
 		util::LazyInit<Json::Value const> abi;
 		util::LazyInit<Json::Value const> storageLayout;
@@ -509,12 +503,8 @@ private:
 	bool m_metadataLiteralSources = false;
 	MetadataHash m_metadataHash = MetadataHash::IPFS;
 	langutil::DebugInfoSelection m_debugInfoSelection = langutil::DebugInfoSelection::Default();
-	bool m_parserErrorRecovery = false;
 	State m_stackState = Empty;
 	CompilationSourceType m_compilationSourceType = CompilationSourceType::Solidity;
-	/// Whether or not there has been an error during processing.
-	/// If this is true, the stack will refuse to generate code.
-	bool m_hasError = false;
 	MetadataFormat m_metadataFormat = defaultMetadataFormat();
 };
 
